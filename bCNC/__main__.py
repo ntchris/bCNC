@@ -2218,6 +2218,20 @@ class Application(Toplevel,Sender):
 	# Send enabled gcode file to the CNC machine
 	#-----------------------------------------------------------------------
 	def run(self, lines=None):
+		# when running gcode for milling, NOT for probing
+		# show a warning message for user to remove probe wires
+		if(lines==None):
+			print("Running Gcode")	
+			ans = tkMessageBox.askquestion(_("Start Running"),
+				_("Start Running Gcode, Remove Probe Wires!"),
+				icon='warning',
+				parent=self.winfo_toplevel())
+			if ( ans!= tkMessageBox.YES):
+				tkMessageBox.showerror(_("RUN Error"),
+					_("Run is Cancelled."))
+				return
+		   
+		
 		self.cleanAfter = True	#Clean when this operation stops
 		print("Will clean after this operation")
 

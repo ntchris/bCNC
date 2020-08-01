@@ -993,15 +993,17 @@ class ControlFrame(CNCRibbon.PageExLabelFrame):
 		step, power = ControlFrame._stepPower(self.step.get())
 		s = step+power
 		if s<_LOWSTEP: s = _LOWSTEP
-		elif s>_HIGHSTEP: s = _HIGHSTEP
-		if self.zstep is not self.step and self.zstep.get() != _NOZSTEP:
-			step, power = ControlFrame._stepPower(self.zstep.get())
-			zs = step+power
-			if zs<_LOWSTEP: zs = _LOWSTEP
-			elif zs>_HIGHZSTEP: zs = _HIGHZSTEP
-		else:
-			zs=None
-		self.setStep(s, zs)
+		elif s>_HIGHSTEP: 
+		  s = _HIGHSTEP
+		# do not touch Z or user may crash the Z and bit
+		#if self.zstep is not self.step and self.zstep.get() != _NOZSTEP:
+		#	step, power = ControlFrame._stepPower(self.zstep.get())
+		#	zs = step+power
+		#	if zs<_LOWSTEP: zs = _LOWSTEP
+		#	elif zs>_HIGHZSTEP: zs = _HIGHZSTEP
+		#else:
+		#	zs=None
+		self.setStep(s)
 
 	#----------------------------------------------------------------------
 	def decStep(self, event=None):
@@ -1011,15 +1013,16 @@ class ControlFrame(CNCRibbon.PageExLabelFrame):
 		if s<=0.0: s = step-power/10.0
 		if s<_LOWSTEP: s = _LOWSTEP
 		elif s>_HIGHSTEP: s = _HIGHSTEP
-		if self.zstep is not self.step and self.zstep.get() != _NOZSTEP:
-			step, power = ControlFrame._stepPower(self.zstep.get())
-			zs = step-power
-			if zs<=0.0: zs = step-power/10.0
-			if zs<_LOWSTEP: zs = _LOWSTEP
-			elif zs>_HIGHZSTEP: zs = _HIGHZSTEP
-		else:
-			zs=None
-		self.setStep(s, zs)
+		# do not touch Z or user may crash the Z and bit
+		#if self.zstep is not self.step and self.zstep.get() != _NOZSTEP:
+		#	step, power = ControlFrame._stepPower(self.zstep.get())
+		#	zs = step-power
+		#	if zs<=0.0: zs = step-power/10.0
+		#	if zs<_LOWSTEP: zs = _LOWSTEP
+		#	elif zs>_HIGHZSTEP: zs = _HIGHZSTEP
+		#else:
+		#	zs=None
+		self.setStep(s)
 
 	#----------------------------------------------------------------------
 	def mulStep(self, event=None):
@@ -1027,15 +1030,18 @@ class ControlFrame(CNCRibbon.PageExLabelFrame):
 		step, power = ControlFrame._stepPower(self.step.get())
 		s = step*10.0
 		if s<_LOWSTEP: s = _LOWSTEP
-		elif s>_HIGHSTEP: s = _HIGHSTEP
-		if self.zstep is not self.step and self.zstep.get() != _NOZSTEP:
-			step, power = ControlFrame._stepPower(self.zstep.get())
-			zs = step*10.0
-			if zs<_LOWSTEP: zs = _LOWSTEP
-			elif zs>_HIGHZSTEP: zs = _HIGHZSTEP
-		else:
-			zs=None
-		self.setStep(s, zs)
+		elif s>_HIGHSTEP:
+		  s = _HIGHSTEP
+		# do not touch Z or user may crash the Z and bit
+		#if self.zstep is not self.step and self.zstep.get() != _NOZSTEP:
+		#	step, power = ControlFrame._stepPower(self.zstep.get())
+		#	zs = step*10.0
+		#	if zs<_LOWSTEP: zs = _LOWSTEP
+		#	elif zs>_HIGHZSTEP: zs = _HIGHZSTEP
+		#else:
+		#	zs=None
+		#self.setStep(s, zs)
+		self.setStep(s)
 
 	#----------------------------------------------------------------------
 	def divStep(self, event=None):
@@ -1044,14 +1050,16 @@ class ControlFrame(CNCRibbon.PageExLabelFrame):
 		s = step/10.0
 		if s<_LOWSTEP: s = _LOWSTEP
 		elif s>_HIGHSTEP: s = _HIGHSTEP
-		if self.zstep is not self.step and self.zstep.get() != _NOZSTEP:
-			step, power = ControlFrame._stepPower(self.zstep.get())
-			zs = step/10.0
-			if zs<_LOWSTEP: zs = _LOWSTEP
-			elif zs>_HIGHZSTEP: zs = _HIGHZSTEP
-		else:
-			zs=None
-		self.setStep(s, zs)
+		
+		# do not touch Z or user may crash the Z and bit
+		#if self.zstep is not self.step and self.zstep.get() != _NOZSTEP:
+		#	step, power = ControlFrame._stepPower(self.zstep.get())
+		#	zs = step/10.0
+		#	if zs<_LOWSTEP: zs = _LOWSTEP
+		#	elif zs>_HIGHZSTEP: zs = _HIGHZSTEP
+		#else:
+		#	zs=None
+		self.setStep(s)
 
 	#----------------------------------------------------------------------
 	def setStep1(self, event=None):

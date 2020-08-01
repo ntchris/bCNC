@@ -709,18 +709,24 @@ class ProbeFrame(CNCRibbon.PageFrame):
 
 	#-----------------------------------------------------------------------
 	def warnMessage(self):
-		if self.warn:
-			ans = tkMessageBox.askquestion(_("Probe connected?"),
-				_("Please verify that the probe is connected.\n\nShow this message again?"),
+		ans = tkMessageBox.askquestion(_("Probe Warning"),
+				_("Please verify that the probe wire is connected. \nContinue Probe action?"),
 				icon='warning',
 				parent=self.winfo_toplevel())
-			if ans != YES:
-				self.warn = False
+		return ans
 
 	#-----------------------------------------------------------------------
 	# Probe one Point
 	#-----------------------------------------------------------------------
 	def probe(self, event=None):
+		print("ans is " + str(ans))			
+		# show warning message before probing, remind user to connect wires	
+		ans = self.warnMessage()
+		if( ans != tkMessageBox.YES):
+		   tkMessageBox.showerror(_("Probe Error"),
+					_("Probe Cancelled."))
+		   return
+		   
 		if self.probeautogoto.get() == 1:
 			self.probeautogotonext = True
 
@@ -729,8 +735,7 @@ class ProbeFrame(CNCRibbon.PageFrame):
 				_("Invalid probe feed rate"),
 				parent=self.winfo_toplevel())
 			return
-		self.warnMessage()
-
+		   
 		cmd = str(CNC.vars["prbcmd"])
 		ok = False
 
@@ -1248,6 +1253,18 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 	# Probe an X-Y area
 	#-----------------------------------------------------------------------
 	def scan(self, event=None):
+		print("auto bed level scan()")
+		# show warning message before probing, remind user to connect wires
+		ans = tkMessageBox.askquestion(_("Auto Bed Leveling Warning"),
+				_("Starting Auto Bed Leveling, Please make sure Probe wires is connected, Continue Auto Bed Leveling?"),
+				icon='warning',
+				parent=self.winfo_toplevel())
+		if ( ans!= tkMessageBox.YES):
+		   tkMessageBox.showerror(_("RUN Error"),
+					_("Auto Bed Leveling is Cancelled."))
+		   return
+	
+	
 		if self.change(): return
 		self.event_generate("<<DrawProbe>>")
 		# absolute
