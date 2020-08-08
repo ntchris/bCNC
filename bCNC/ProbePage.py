@@ -719,9 +719,10 @@ class ProbeFrame(CNCRibbon.PageFrame):
 	# Probe one Point
 	#-----------------------------------------------------------------------
 	def probe(self, event=None):
-		print("ans is " + str(ans))			
 		# show warning message before probing, remind user to connect wires	
 		ans = self.warnMessage()
+		print("ans is " + str(ans))			
+
 		if( ans != tkMessageBox.YES):
 		   tkMessageBox.showerror(_("Probe Error"),
 					_("Probe Cancelled."))
@@ -1211,7 +1212,15 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 					_("Invalid Z probing region"),
 					parent=self.winfo_toplevel())
 			error = True
-
+		
+		# normally ,  the Max value	must be larger than 0 (>0), otherwise the probe will hit the material/bed.
+		SmallestMaxValueAllowed=0.4	
+		if probe.zmax < SmallestMaxValueAllowed:
+			tkMessageBox.showerror(_("Probe Error"),
+						_("Invalid Z Max, it must be 0.4 or larger so it is above the mill surface"),
+						parent=self.winfo_toplevel())
+			error = True
+			
 		if probe.zmin >= probe.zmax:
 			if verbose:
 				tkMessageBox.showerror(_("Probe Error"),
@@ -1253,6 +1262,9 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 	# Probe an X-Y area
 	#-----------------------------------------------------------------------
 	def scan(self, event=None):
+
+		if self.change(): return
+		
 		print("auto bed level scan()")
 		# show warning message before probing, remind user to connect wires
 		ans = tkMessageBox.askquestion(_("Auto Bed Leveling Warning"),
@@ -1263,9 +1275,7 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		   tkMessageBox.showerror(_("RUN Error"),
 					_("Auto Bed Leveling is Cancelled."))
 		   return
-	
-	
-		if self.change(): return
+		   
 		self.event_generate("<<DrawProbe>>")
 		# absolute
 		self.app.run(lines=self.app.gcode.probe.scan())
