@@ -2070,7 +2070,7 @@ class Application(Toplevel,Sender):
 
 		self.setStatus(_("Loading: %s ...")%(filename), True)
 		Sender.load(self,filename)
-
+        
 		if ext==".probe":
 			self.autolevel.setValues()
 			self.event_generate("<<DrawProbe>>")
@@ -2498,7 +2498,7 @@ class Application(Toplevel,Sender):
 		if self._probeUpdate:
 			Page.frames["Probe:Probe"].updateProbe()
 			Page.frames["ProbeCommon"].updateTlo()
-			self.canvas.drawProbe()
+			self.canvas.canvasDrawProbe()
 			self._probeUpdate = False
 
 		# Update any possible variable?
