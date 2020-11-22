@@ -802,7 +802,10 @@ class ControlFrame(CNCRibbon.PageExLabelFrame):
 		self.step = tkExtra.Combobox(frame, width=6, background=tkExtra.GLOBAL_CONTROL_BACKGROUND)
 		self.step.grid(row=row, column=col, columnspan=2, sticky=EW)
 		self.step.set(Utils.config.get("Control","step"))
-		self.step.fill(map(float, Utils.config.get("Control","steplist").split()))
+		steplist = Utils.config.get("Control","steplist").split()
+		print(steplist)
+		self.step.fill(map(float, steplist))
+        
 		tkExtra.Balloon.set(self.step, _("Step for every move operation"))
 		self.addWidget(self.step)
 

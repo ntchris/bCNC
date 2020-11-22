@@ -1345,7 +1345,7 @@ class CNCCanvas(Canvas, object):
 		self.drawGrid()
 		self.drawMargin()
 		self.drawWorkarea()
-		self.drawProbe()
+		self.canvasDrawProbe()
 		self.drawOrient()
 		self.drawAxes()
 #		self.tag_lower(self._workarea)
@@ -1446,6 +1446,7 @@ class CNCCanvas(Canvas, object):
 	# Draw margins of selected blocks
 	#----------------------------------------------------------------------
 	def drawMargin(self):
+		print("def drawMargin(self):")
 		if self._margin:  self.delete(self._margin)
 		if self._amargin: self.delete(self._amargin)
 		self._margin = self._amargin = None
@@ -1641,7 +1642,7 @@ class CNCCanvas(Canvas, object):
 	#----------------------------------------------------------------------
 	# Display probe
 	#----------------------------------------------------------------------
-	def drawProbe(self):
+	def canvasDrawProbe(self):
 		self.delete("Probe")
 		if self._probe:
 			self.delete(self._probe)
@@ -1649,20 +1650,21 @@ class CNCCanvas(Canvas, object):
 		if not self.draw_probe: return
 		if self.view in (VIEW_XZ, VIEW_YZ): return
 
+		GridColor = "Orange"
 		# Draw probe grid
 		probe = self.gcode.probe
 		for x in bmath.frange(probe.xmin, probe.xmax+0.00001, probe.xstep()):
 			xyz = [(x,probe.ymin,0.), (x,probe.ymax,0.)]
 			item = self.create_line(self.plotCoords(xyz),
 						tag="Probe",
-						fill='Yellow')
+						fill=GridColor)
 			self.tag_lower(item)
 
 		for y in bmath.frange(probe.ymin, probe.ymax+0.00001, probe.ystep()):
 			xyz = [(probe.xmin,y,0.), (probe.xmax,y,0.)]
 			item = self.create_line(self.plotCoords(xyz),
 						tag="Probe",
-						fill='Yellow')
+						fill=GridColor)
 			self.tag_lower(item)
 
 		# Draw probe points
@@ -2273,7 +2275,7 @@ class CanvasFrame(Frame):
 	def drawProbe(self, value=None):
 		if value is not None: self.draw_probe.set(value)
 		self.canvas.draw_probe = self.draw_probe.get()
-		self.canvas.drawProbe()
+		self.canvas.canvasDrawProbe()
 
 	#----------------------------------------------------------------------
 	def drawWorkarea(self, value=None):

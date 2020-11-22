@@ -2094,6 +2094,14 @@ class Application(Toplevel,Sender):
 			self.setStatus(_("'%s' loaded")%(filename))
 		self.title("%s %s: %s"%(Utils.__prg__,__version__,self.gcode.filename))
 
+		print(ext)
+		if ext== ".nc":
+			# drawProbe()
+			self.autolevel.getMargins()
+			self.event_generate("<<DrawProbe>>")
+
+			print("auto load margins")
+
 	#-----------------------------------------------------------------------
 	def save(self, filename):
 		Sender.save(self, filename)
@@ -2435,9 +2443,10 @@ class Application(Toplevel,Sender):
 					# Unknown?
 					self.buffer.insert(END, line)
 					self.terminal.itemconfig(END, foreground="Magenta")
-
-				if self.terminal.size() > 1000:
-					self.terminal.delete(0,500)
+				
+				TermMaxSize = 1000
+				if self.terminal.size() > TermMaxSize:
+					self.terminal.delete(0)
 			except Empty:
 				break
 
