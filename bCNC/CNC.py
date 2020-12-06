@@ -298,8 +298,13 @@ class Probe:
 		self.makeMatrix()
 		x = self.xmin
 		xstep = self._xstep
-		lines = ["G0Z%.4f"%(CNC.vars["safe"]),
-			 "G0X%.4fY%.4f"%(self.xmin, self.ymin)]
+		# gcode to enable stepper motor lock
+		lines = []
+		lines.append("$1=255")
+
+		lines.append( "G0Z%.4f"%(CNC.vars["safe"]))
+		lines.append( "G0X%.4fY%.4f"%(self.xmin, self.ymin))
+
 		for j in range(self.yn):
 			y = self.ymin + self._ystep*j
 			for i in range(self.xn):
@@ -313,6 +318,8 @@ class Probe:
 			xstep = -xstep
 		lines.append("G0Z%.4f"%(self.zmax))
 		lines.append("G0X%.4fY%.4f"%(self.xmin,self.ymin))
+        # gcode to disable stepper motor lock
+		lines.append("$1=254")
 		return lines
 
 	#----------------------------------------------------------------------

@@ -764,7 +764,8 @@ class ProbeFrame(CNCRibbon.PageFrame):
 		else:
 			tkMessageBox.showerror(_("Probe Error"),
 					_("At least one probe direction should be specified"))
-
+      #auto set z = 0 ??   setZ0
+      #and move up a little bit so user won't crash the bit and material'
 	#-----------------------------------------------------------------------
 	# Rapid move to the last probed location
 	#-----------------------------------------------------------------------

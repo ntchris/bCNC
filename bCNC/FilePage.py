@@ -321,11 +321,16 @@ class SerialFrame(CNCRibbon.PageLabelFrame):
 		self.app.controllerSet(self.ctrlCombo.get())
 
 	#-----------------------------------------------------------------------
+	def getComPortCleanName(self, name):
+		clean = self.portCombo.get().split("\t")[0]
+		return clean
+			
 	def comportClean(self, event=None):
 		clean = self.portCombo.get().split("\t")[0]
 		if(self.portCombo.get() != clean):
 			print("comport fix")
-			self.portCombo.set(clean)
+			# user need to see what is this com port.
+			#	self.portCombo.set(clean)
 
 	#-----------------------------------------------------------------------
 	def comportsGet(self):
@@ -360,6 +365,7 @@ class SerialFrame(CNCRibbon.PageLabelFrame):
 
 		#Clean neighbour duplicates
 		devices_clean = []
+
 		devprev = '';
 		for i in devices:
 			if i.split("\t")[0] != devprev: devices_clean += [i]
@@ -367,6 +373,17 @@ class SerialFrame(CNCRibbon.PageLabelFrame):
 
 		self.portCombo.fill(devices_clean)
 
+		# find the com port looks like arduino, put it in the first place , as default com port,
+		#  so users don't have to find it every time.
+		Keyword_Arduino1 = "Arduino"
+		Keyword_Arduino2 = "CH340"
+		arduinoIndex = 0
+		for i in devices_clean:
+			if( Keyword_Arduino1 in i or  Keyword_Arduino2 in i ):				
+					self.portCombo.select(arduinoIndex)
+					break
+			arduinoIndex+=1								
+ 
 	#-----------------------------------------------------------------------
 	def saveConfig(self):
 		# Connection

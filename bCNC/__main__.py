@@ -268,7 +268,7 @@ class Application(Toplevel,Sender):
 		self.bind('<<Cut>>',		self.cut)
 		self.bind('<<Paste>>',		self.paste)
 
-		self.bind('<<Connect>>',	self.openClose)
+		self.bind('<<Connect>>',	self.openCloseSerial)
 
 		self.bind('<<New>>',		self.newFile)
 		self.bind('<<Open>>',		self.loadDialog)
@@ -2173,7 +2173,7 @@ class Application(Toplevel,Sender):
 		self.gcode.syncFileTime()
 
 	#-----------------------------------------------------------------------
-	def openClose(self, event=None):
+	def openCloseSerial(self, event=None):
 		serialPage = Page.frames["Serial"]
 		if self.serial is not None:
 			self.close()
@@ -2182,7 +2182,8 @@ class Application(Toplevel,Sender):
 						activebackground="Salmon")
 		else:
 			serialPage = Page.frames["Serial"]
-			device	 = _device or serialPage.portCombo.get() #.split("\t")[0]
+			device	 = _device or serialPage.portCombo.get()
+			device = serialPage.getComPortCleanName(device)
 			baudrate = _baud   or serialPage.baudCombo.get()
 			if self.open(device, baudrate):
 				serialPage.connectBtn.config(text=_("Close"),
@@ -2325,6 +2326,8 @@ class Application(Toplevel,Sender):
 			# the buffer of the machine should be empty?
 			self._runLines = len(self._paths) + 1	# plus the wait
 		else:
+			lines.insert(0, "$1=255")
+			lines.append("$1=254")
 			n = 1		# including one wait command
 			for line in CNC.compile(lines):
 				if line is not None:

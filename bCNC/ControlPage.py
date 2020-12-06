@@ -961,11 +961,12 @@ class ControlFrame(CNCRibbon.PageExLabelFrame):
 		self.app.mcontrol.jog("Z-%s"%(self.getStep('z')))
 
 	def go2origin(self, event=None):
+		self.sendGCode("$1=255")
 		self.sendGCode("G90")
 		self.sendGCode("G0Z%d"%(CNC.vars['safe']))
 		self.sendGCode("G0X0Y0")
 		self.sendGCode("G0Z0")
-
+		return
 	#----------------------------------------------------------------------
 	def setStep(self, s, zs=None):
 		self.step.set("%.4g"%(s))
@@ -1353,6 +1354,7 @@ class abcControlFrame(CNCRibbon.PageExLabelFrame):
 		self.app.mcontrol.jog("A-%s"%(self.getStep('z')))
 
 	def go2abcorigin(self, event=None):
+		self.sendGCode("$1=255")
 		self.sendGCode("G90")
 		#self.sendGCode("G0A%d"%(CNC.vars['safe']))
 		self.sendGCode("G0B0C0")

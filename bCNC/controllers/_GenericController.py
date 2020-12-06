@@ -81,6 +81,8 @@ class _GenericController:
 	#----------------------------------------------------------------------
 	def home(self, event=None):
 		self.master._alarm = False
+		# enable stepper motor lock when doing home.
+		self.master.sendGCode("$1=255")
 		self.master.sendGCode("$H")
 
 	def viewStatusReport(self):
