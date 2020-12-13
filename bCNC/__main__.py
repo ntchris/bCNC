@@ -271,7 +271,7 @@ class Application(Toplevel,Sender):
 		self.bind('<<Connect>>',	self.openCloseSerial)
 
 		self.bind('<<New>>',		self.newFile)
-		self.bind('<<Open>>',		self.loadDialog)
+		self.bind('<<OpenFile>>',		self.loadDialog)
 		self.bind('<<Import>>',		lambda x,s=self: s.importFile())
 		self.bind('<<Save>>',		self.saveAll)
 		self.bind('<<SaveAs>>',		self.saveDialog)
@@ -294,7 +294,7 @@ class Application(Toplevel,Sender):
 						# Do not send the event otherwise it will skip the feedHold/resume
 		self.bind('<<FeedHold>>',	lambda e,s=self: s.feedHold())
 		self.bind('<<Resume>>',		lambda e,s=self: s.resume())
-		self.bind('<<Run>>',		lambda e,s=self: s.run())
+		self.bind('<<Run>>',		lambda e,s=self: s.runGcode())
 		self.bind('<<Stop>>',		self.stopRun)
 		self.bind('<<Pause>>',		self.pause)
 #		self.bind('<<TabAdded>>',	self.tabAdded)
@@ -2008,7 +2008,10 @@ class Application(Toplevel,Sender):
 					Utils.getUtf("File", "dir"),
 					Utils.getUtf("File", "file")),
 			filetypes=FILETYPES)
-		if filename: self.load(filename)
+		if filename: 
+			r = self.loadFile(filename)
+			#if ( r==False):
+			#	tkMessageBox.showerror(_("File Error"),	_("Load File  Error"))
 		return "break"
 
 	#-----------------------------------------------------------------------
@@ -2054,7 +2057,7 @@ class Application(Toplevel,Sender):
 	#-----------------------------------------------------------------------
 	# Load a file into editor
 	#-----------------------------------------------------------------------
-	def load(self, filename, autoloaded = False):
+	def loadFile(self, filename, autoloaded = False):
 		fn,ext = os.path.splitext(filename)
 		if ext==".probe":
 			pass
@@ -2069,8 +2072,13 @@ class Application(Toplevel,Sender):
 					self.gcode.probe.init()
 
 		self.setStatus(_("Loading: %s ...")%(filename), True)
-		Sender.load(self,filename)
-        
+		
+		try: 
+			Sender.loadFileToEditor(self,filename)
+		except Exception as err:
+			tkMessageBox.showerror(_("File Error"),	_(str( err)) )
+			return False
+
 		if ext==".probe":
 			self.autolevel.setValues()
 			self.event_generate("<<DrawProbe>>")
@@ -2226,7 +2234,7 @@ class Application(Toplevel,Sender):
 	#-----------------------------------------------------------------------
 	# Send enabled gcode file to the CNC machine
 	#-----------------------------------------------------------------------
-	def run(self, lines=None):
+	def runGcode(self, lines=None):
 		# when running gcode for milling, NOT for probing
 		# show a warning message for user to remove probe wires
 		if(lines==None):
@@ -2278,7 +2286,8 @@ class Application(Toplevel,Sender):
 				os.system(self._onStart)
 			except:
 				pass
-
+			
+		# run gcode file 
 		if lines is None:
 			#if not self.gcode.probe.isEmpty() and not self.gcode.probe.zeroed:
 			#	tkMessageBox.showerror(_("Probe is not zeroed"),
@@ -2326,6 +2335,7 @@ class Application(Toplevel,Sender):
 			# the buffer of the machine should be empty?
 			self._runLines = len(self._paths) + 1	# plus the wait
 		else:
+			# run gcode lines
 			lines.insert(0, "$1=255")
 			lines.append("$1=254")
 			n = 1		# including one wait command

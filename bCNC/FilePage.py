@@ -48,7 +48,7 @@ class _RecentMenuButton(Ribbon.MenuButton):
 				accelerator=path, # Show as accelerator in order to be aligned
 				command=lambda s=self,i=i: s.event_generate("<<Recent%d>>"%(i)))
 		if i==0: # no entry
-			self.event_generate("<<Open>>")
+			self.event_generate("<<OpenFile>>")
 			return None
 		return menu
 
@@ -74,7 +74,7 @@ class FileGroup(CNCRibbon.ButtonGroup):
 
 		# ---
 		col,row=1,0
-		b = Ribbon.LabelButton(self.frame, self, "<<Open>>",
+		b = Ribbon.LabelButton(self.frame, self, "<<OpenFile>>",
 				image=Utils.icons["open32"],
 				background=Ribbon._BACKGROUND)
 		b.grid(row=row, column=col, rowspan=2, padx=0, pady=0, sticky=NSEW)
@@ -83,7 +83,7 @@ class FileGroup(CNCRibbon.ButtonGroup):
 
 		col,row=1,2
 		b = _RecentMenuButton(self.frame, None,
-				text=_("Open"),
+				text=_("OpenFile"),
 				image=Utils.icons["triangle_down"],
 				compound=RIGHT,
 				background=Ribbon._BACKGROUND)
@@ -306,7 +306,7 @@ class SerialFrame(CNCRibbon.PageLabelFrame):
 
 		self.connectBtn = Ribbon.LabelButton(self,
 				image=Utils.icons["serial48"],
-				text=_("Open"),
+				text=_("OpenPort"),
 				compound=TOP,
 				command=lambda s=self : s.event_generate("<<Connect>>"),
 				background=Ribbon._BACKGROUND)
@@ -348,7 +348,7 @@ class SerialFrame(CNCRibbon.PageLabelFrame):
 				#Print list to console if requested
 				comport = ''
 				for j in i: comport+=j+"\t"
-				print(comport)
+				#print(comport)
 			for hw in i[2].split(' '):
 				hwgrep += ["hwgrep://"+hw+"\t"+i[1]]
 

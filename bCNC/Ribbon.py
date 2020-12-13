@@ -521,7 +521,7 @@ class TabRibbonFrame(Frame):
 		tkExtra.Balloon.set(b, _("New file"))
 		b.pack(side=LEFT)
 
-		b = LabelButton(frame, self, "<<Open>>",
+		b = LabelButton(frame, self, "<<OpenFile>>",
 				image=Utils.icons["load"],
 				background=_BACKGROUND_DISABLE)
 		tkExtra.Balloon.set(b, _("Open file [Ctrl-O]"))

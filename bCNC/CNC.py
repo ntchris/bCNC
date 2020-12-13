@@ -305,6 +305,7 @@ class Probe:
 
 		# don't crash the bit and machine!! move Z to  highest safe position first
 		# Z-1 is the highest machine position.  0 is invalid because it's higher than -1.
+		# maybe move these two lines to ....?
 		lines.append( "G53 Z-1")
 		# move to work area 0,0 point of origin 
 		lines.append("G0 X0Y0")
@@ -836,7 +837,12 @@ class CNC:
 	def updateG():
 		for g in CNC.vars["G"]:
 			if g[0] == "F":
-				CNC.vars["feed"] = float(g[1:])
+				print(g)
+				g1=g[1:]
+				g1f = float(g1)
+				print("g1f is")
+				print(g1f)
+				CNC.vars["feed"] = g1f
 			elif g[0] == "S":
 				CNC.vars["rpm"] = float(g[1:])
 			elif g[0] == "T":
@@ -1327,17 +1333,22 @@ class CNC:
 
 	#----------------------------------------------------------------------
 	# Create path for one g command
+	# return False if line has syntax error
 	#----------------------------------------------------------------------
 	def motionStart(self, cmds):
 		#print "\n<<<",cmds
 		self.mval = 0	# reset m command
+
 		for cmd in cmds:
-			c = cmd[0].upper()
 			try:
 				value = float(cmd[1:])
-			except:
-				value = 0
+			except Exception  as err:
+				# if one line has error, clear the whole gcode.
+				print("CMD error: "+ cmd + ",  " + str(err))
+				#tkMessageBox.showerror(_("File Error"),	_("Gcode error " + cmd + " " +  str(err)))
+				raise Exception("Gcode error: " + str(err))
 
+			c = cmd[0].upper()
 			if   c == "X":
 				self.xval = value*self.unit
 				if not self.absolute:
@@ -2319,6 +2330,7 @@ class GCode:
 
 	#----------------------------------------------------------------------
 	# add new line to list create block if necessary
+	# return false if line has syntax error
 	#----------------------------------------------------------------------
 	def _addLine(self, line):
 		if line.startswith("(Block-name:"):
@@ -2330,7 +2342,6 @@ class GCode:
 					self.blocks.append(Block(value))
 				else:
 					self.blocks[-1]._name = value
-				return
 
 		#FIXME: Code to import legacy tabs can be probably removed in year 2020 or so:
 		if line.startswith("(Block-tab:"):
@@ -2371,7 +2382,7 @@ class GCode:
 	#----------------------------------------------------------------------
 	# Load a file into editor
 	#----------------------------------------------------------------------
-	def load(self, filename=None):
+	def loadGCodeFile(self, filename=None):
 		if filename is None: filename = self.filename
 		self.init()
 		self.filename = filename
@@ -2381,8 +2392,20 @@ class GCode:
 		self.cnc.initPath()
 		self.cnc.resetAllMargins()
 		self._blocksExist = False
+		i = 0
 		for line in f:
-			self._addLine(line[:-1].replace("\x0d",""))
+			try:
+				r = self._addLine(line[:-1].replace("\x0d",""))
+			except Exception as err:
+				# add file name and line number into the current error
+				# tkMessageBox.showerror(_("File Error"),	_( filename + " has wrong gcode, \n line number "  +str(i) +" "+  line + "\n" + str(err  )))
+				errorMessage = filename + " has wrong gcode, \n line number "  +str(i) +" "+  line + "\n" + str(err )
+				self.blocks=[]
+				self._blocksExist = False
+				f.close()
+				raise Exception(errorMessage)
+				return False
+			i+=1
 		self._trim()
 		f.close()
 		return True

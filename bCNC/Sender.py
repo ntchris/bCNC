@@ -20,6 +20,17 @@ import time
 import threading
 import webbrowser
 
+try:
+	import Tkinter
+	from Queue import *
+	from Tkinter import *
+	import tkMessageBox
+except ImportError:
+	import tkinter
+	from queue import *
+	from tkinter import *
+	import tkinter.messagebox as tkMessageBox
+
 from datetime import datetime
 
 try:
@@ -390,7 +401,7 @@ class Sender:
 	#----------------------------------------------------------------------
 	# Load a file into editor
 	#----------------------------------------------------------------------
-	def load(self, filename):
+	def loadFileToEditor(self, filename):
 		fn,ext = os.path.splitext(filename)
 		ext = ext.lower()
 		if ext==".probe":
@@ -403,7 +414,6 @@ class Sender:
 			self.gcode.orient.load(filename)
 		elif ext == ".stl" or ext == ".ply":
 			# FIXME: implements solid import???
-			import tkMessageBox
 			tkMessageBox.showinfo("Open 3D Mesh", "Importing of 3D mesh files in .STL and .PLY format is supported by SliceMesh plugin.\nYou can find it in CAM->SliceMesh.")
 		elif ext==".dxf":
 			self.gcode.init()
@@ -414,9 +424,11 @@ class Sender:
 			self.gcode.importSVG(filename)
 			self._saveConfigFile(filename)
 		else:
-			self.gcode.load(filename)
-			self._saveConfigFile()
+				self.gcode.loadGCodeFile(filename)
+				self._saveConfigFile()
+				
 		Utils.addRecent(filename)
+		return True
 
 	#----------------------------------------------------------------------
 	def save(self, filename):

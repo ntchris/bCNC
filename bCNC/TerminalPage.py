@@ -164,9 +164,9 @@ class TerminalFrame(CNCRibbon.PageFrame):
 		self.terminal.bind("<Control-Key-c>",	self.copy)
 		tkExtra.Balloon.set(self.terminal, _("Terminal communication with controller"))
         
-		MAX =200
-		for i in range(0, MAX):
-			self.terminal.insert(i, str(i))
+		#MAX =200
+		#for i in range(0, MAX):
+		#	self.terminal.insert(i, str(i))
 
 		# ---
 		self.buffer = Listbox(self,
@@ -188,6 +188,7 @@ class TerminalFrame(CNCRibbon.PageFrame):
 	#----------------------------------------------------------------------
 	def clear(self, event=None):
 		self.terminal.delete(0,END)
+
 
 	#----------------------------------------------------------------------
 	def copy(self, event):
