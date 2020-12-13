@@ -280,7 +280,7 @@ class Probe:
 	#----------------------------------------------------------------------
 	# Return the code needed to scan margins for autoleveling
 	#----------------------------------------------------------------------
-	def scanMargins(self):
+	def getGCodeForMoveAlongMargins(self):
 		lines = []
 		lines.append("G0 X%.4f Y%.4f"%(self.xmin, self.ymin))
 		lines.append("G0 X%.4f Y%.4f"%(self.xmin, self.ymax))
@@ -292,7 +292,7 @@ class Probe:
 	#----------------------------------------------------------------------
 	# Return the code needed to scan for autoleveling
 	#----------------------------------------------------------------------
-	def scan(self):
+	def getGCodeForAutoLevelProbe(self):
 		self.clear()
 		self.start = True
 		self.makeMatrix()
@@ -3273,7 +3273,7 @@ class GCode:
 	#----------------------------------------------------------------------
 	# Execute autolevel on selected blocks
 	#----------------------------------------------------------------------
-	def autolevel(self, items):
+	def modifyGCodeForAutolevel(self, items):
 		undoinfo = []
 		operation = "autolevel"
 		for bid in items:

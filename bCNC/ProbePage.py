@@ -140,9 +140,9 @@ class AutolevelGroup(CNCRibbon.ButtonGroup):
 
 		# ---
 		col,row=0,0
-		b = Ribbon.LabelButton(self.frame, self, "<<AutolevelMargins>>",
+		b = Ribbon.LabelButton(self.frame, self, "<<GetAutolevelMargins>>",
 				image=Utils.icons["margins"],
-				text=_("Margins"),
+				text=_("GetMargins"),
 				compound=LEFT,
 				anchor=W,
 				background=Ribbon._BACKGROUND)
@@ -177,23 +177,23 @@ class AutolevelGroup(CNCRibbon.ButtonGroup):
 		# ---
 		row = 0
 		col += 1
-		b = Ribbon.LabelButton(self.frame, self, "<<AutolevelScanMargins>>",
+		b = Ribbon.LabelButton(self.frame, self, "<<MoveAlongMgins>>",
 				image=Utils.icons["margins"],
-				text=_("Scan"),
+				text=_("Move"),
 				compound=LEFT,
 				anchor=W,
 				background=Ribbon._BACKGROUND)
 		b.grid(row=row, column=col, padx=0, pady=0, sticky=NSEW)
-		tkExtra.Balloon.set(b, _("Scan Autolevel Margins"))
+		tkExtra.Balloon.set(b, _("Move along Autolevel Margins"))
 		self.addWidget(b)
 
 		row += 1
 		b = Ribbon.LabelButton(self.frame,
 				image=Utils.icons["level"],
-				text=_("Autolevel"),
+				text=_("ModifyGCode"),
 				compound=LEFT,
 				anchor=W,
-				command=lambda a=app:a.insertCommand("AUTOLEVEL",True),
+				command=lambda a=app:a.insertCommand("MODIFYGCODEFORAUTOLEVEL",True),
 				background=Ribbon._BACKGROUND)
 		b.grid(row=row, column=col, padx=0, pady=0, sticky=NSEW)
 		tkExtra.Balloon.set(b, _("Modify selected G-Code to match autolevel"))
@@ -201,9 +201,9 @@ class AutolevelGroup(CNCRibbon.ButtonGroup):
 
 		# ---
 		col,row=2,0
-		b = Ribbon.LabelButton(self.frame, self, "<<AutolevelScan>>",
+		b = Ribbon.LabelButton(self.frame, self, "<<AutolevelProbe>>",
 				image=Utils.icons["gear32"],
-				text=_("Scan"),
+				text=_("AutoLevelProbe"),
 				compound=TOP,
 				justify=CENTER,
 				width=48,
@@ -1262,7 +1262,7 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 	#-----------------------------------------------------------------------
 	# Probe an X-Y area
 	#-----------------------------------------------------------------------
-	def scan(self, event=None):
+	def autoLevelProbe(self, event=None):
 
 		if self.change(): return
 		
@@ -1279,14 +1279,14 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		   
 		self.event_generate("<<DrawProbe>>")
 		# absolute
-		self.app.run(lines=self.app.gcode.probe.scan())
+		self.app.run(lines=self.app.gcode.probe.getGCodeForAutoLevelProbe())
 
 	#-----------------------------------------------------------------------
-	# Scan autolevel margins
+	#Move gantry by the autolevel margins
 	#-----------------------------------------------------------------------
-	def scanMargins(self, event=None):
+	def moveAlongMgins(self, event=None):
 		if self.change(): return
-		self.app.run(lines=self.app.gcode.probe.scanMargins())
+		self.app.run(lines=self.app.gcode.probe. getGCodeForMoveAlongMargins())
 
 
 #===============================================================================

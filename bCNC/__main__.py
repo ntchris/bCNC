@@ -340,11 +340,11 @@ class Application(Toplevel,Sender):
 		self.bind('<<ToolCalibrate>>',	frame.calibrate)
 		self.bind('<<ToolChange>>',	frame.change)
 
-		self.bind('<<AutolevelMargins>>',self.autolevel.getMargins)
+		self.bind('<<GetAutolevelMargins>>',self.autolevel.getMargins)
 		self.bind('<<AutolevelZero>>',	self.autolevel.setZero)
 		self.bind('<<AutolevelClear>>',	self.autolevel.clear)
-		self.bind('<<AutolevelScan>>',	self.autolevel.scan)
-		self.bind('<<AutolevelScanMargins>>',	self.autolevel.scanMargins)
+		self.bind('<<AutolevelProbe>>',	self.autolevel.autoLevelProbe)
+		self.bind('<<MoveAlongMgins>>',	self.autolevel.moveAlongMgins)
 
 		self.bind('<<CameraOn>>',	self.canvas.cameraOn)
 		self.bind('<<CameraOff>>',	self.canvas.cameraOff)
@@ -1269,8 +1269,8 @@ class Application(Toplevel,Sender):
 		if rexx.abbrev("ABOUT",cmd,3):
 			self.about()
 
-		elif rexx.abbrev("AUTOLEVEL",cmd,4):
-			self.executeOnSelection("AUTOLEVEL", True)
+		elif rexx.abbrev("MODIFYGCODEFORAUTOLEVEL",cmd,4):
+			self.executeOnSelection("MODIFYGCODEFORAUTOLEVEL", True)
 
 		# CAM*ERA: camera actions
 		elif rexx.abbrev("CAMERA",cmd,3):
@@ -1744,8 +1744,8 @@ class Application(Toplevel,Sender):
 		self.busy()
 		sel = None
 		undoinfo = None	# all operations should return undo information
-		if   cmd == "AUTOLEVEL":
-			sel = self.gcode.autolevel(items)
+		if   cmd == "MODIFYGCODEFORAUTOLEVEL":
+			sel = self.gcode.modifyGCodeForAutolevel(items)
 		elif cmd == "CUT":
 			sel = self.gcode.cut(items, *args)
 		elif cmd == "CLOSE":
