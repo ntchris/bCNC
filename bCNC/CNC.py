@@ -291,6 +291,7 @@ class Probe:
 
 	#----------------------------------------------------------------------
 	# Return the code needed to scan for autoleveling
+	# Probe from Top to Bottom
 	#----------------------------------------------------------------------
 	def getGCodeForAutoLevelProbe(self):
 		self.clear()
@@ -302,9 +303,54 @@ class Probe:
 		lines = []
 		lines.append("$1=255")
 
+		# don't crash the bit and machine!! move Z to  highest safe position first
+		# Z-1 is the highest machine position.  0 is invalid because it's higher than -1.
+		lines.append( "G53 Z-1")
+		# move to work area 0,0 point of origin 
+		lines.append("G0 X0Y0")
+
+		# lines.append( "G0X%.4fY%.4f"%(self.xmin, self.ymax))
+		# must move to point of origin before starting abl
+
+        # do auto bed leveling from 0,0
+		print(" ymin: "+ str(self.ymin )+ " ymax: " + str( self.ymax) )
+		for j in range(self.yn):
+			y = self.ymax - self._ystep*j
+			for i in range(self.xn):
+				lines.append("G0Z%.4f"%(self.zmax))
+				lines.append("G0X%.4fY%.4f"%(x,y))
+				lines.append("%wait")	# added for smoothie
+				lines.append("%sZ%.4fF%g"%(CNC.vars["prbcmd"], self.zmin, CNC.vars["prbfeed"]))
+				lines.append("%wait")	# added for smoothie
+				x += xstep
+			x -= xstep
+			xstep = -xstep
+		lines.append("G0Z%.4f"%(self.zmax))
+		lines.append("G0 X0 Y0")
+        # gcode to disable stepper motor lock
+		lines.append("$1=254")
+		return lines
+
+
+
+	#----------------------------------------------------------------------
+	# Return the code needed to scan for autoleveling
+	# The original ABL, probe from bottom upward, not easy to check upper border
+	#----------------------------------------------------------------------
+	def getGCodeForAutoLevelProbeBottomUp(self):
+		self.clear()
+		self.start = True
+		self.makeMatrix()
+		x = self.xmin
+		xstep = self._xstep
+		# gcode to enable stepper motor lock
+		lines = []
+		lines.append("$1=255")
+
 		lines.append( "G0Z%.4f"%(CNC.vars["safe"]))
 		lines.append( "G0X%.4fY%.4f"%(self.xmin, self.ymin))
-
+        # do auto bed leveling from 0,0
+		print(" ymin: "+ str(self.ymin )+ " ymax: " + str( self.ymax) )
 		for j in range(self.yn):
 			y = self.ymin + self._ystep*j
 			for i in range(self.xn):
@@ -321,6 +367,7 @@ class Probe:
         # gcode to disable stepper motor lock
 		lines.append("$1=254")
 		return lines
+
 
 	#----------------------------------------------------------------------
 	# Add a probed point to the list and the 3D matrix
