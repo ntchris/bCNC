@@ -203,14 +203,14 @@ class AutolevelGroup(CNCRibbon.ButtonGroup):
 		col,row=2,0
 		b = Ribbon.LabelButton(self.frame, self, "<<AutolevelProbe>>",
 				image=Utils.icons["gear32"],
-				text=_("AutoLevelProbe"),
+				text=_("ABL Probe"),
 				compound=TOP,
 				justify=CENTER,
 				width=48,
 				background=Ribbon._BACKGROUND)
 		b.grid(row=row, column=col, rowspan=3, padx=0, pady=0, sticky=NSEW)
 		self.addWidget(b)
-		tkExtra.Balloon.set(b, _("Scan probed area for level information on Z plane"))
+		tkExtra.Balloon.set(b, _("Auto Bed Leveling, Probe the gcode area  for level information on Z plane"))
 
 
 #===============================================================================
