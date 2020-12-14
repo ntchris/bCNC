@@ -2126,7 +2126,7 @@ class Application(Toplevel,Sender):
 
 	#-----------------------------------------------------------------------
 	def reload(self, event=None):
-		self.load(self.gcode.filename)
+		self.loadFile(self.gcode.filename)
 
 	#-----------------------------------------------------------------------
 	def importFile(self, filename=None):
@@ -2148,7 +2148,7 @@ class Application(Toplevel,Sender):
 			elif ext == ".svg":
 				gcode.importSVG(filename)
 			else:
-				gcode.load(filename)
+				gcode.loadFile(filename)
 			sel = self.editor.getSelectedBlocks()
 			if not sel:
 				pos = None
@@ -2174,9 +2174,9 @@ class Application(Toplevel,Sender):
 					parent=self)
 				if ans==tkMessageBox.YES or ans==True:
 					self.gcode.resetModified()
-					self.load(self.gcode.filename)
+					self.loadFile(self.gcode.filename)
 			else:
-				self.load(self.gcode.filename, True)
+				self.loadFile(self.gcode.filename, True)
 		self._inFocus = False
 		self.gcode.syncFileTime()
 
@@ -2193,16 +2193,16 @@ class Application(Toplevel,Sender):
 			device	 = _device or serialPage.portCombo.get()
 			device = serialPage.getComPortCleanName(device)
 			baudrate = _baud   or serialPage.baudCombo.get()
-			if self.open(device, baudrate):
+			if self.openPort(device, baudrate):
 				serialPage.connectBtn.config(text=_("Close"),
 						background="LightGreen",
 						activebackground="LightGreen")
 				self.enable()
 
 	#-----------------------------------------------------------------------
-	def open(self, device, baudrate):
+	def openPort(self, device, baudrate):
 		try:
-			return Sender.open(self, device, baudrate)
+			return Sender.openSerialPort(self, device, baudrate)
 		except:
 			self.serial = None
 			self.thread = None
@@ -2474,7 +2474,7 @@ class Application(Toplevel,Sender):
 
 		# Load file from pendant
 		if self._pendantFileUploaded!=None:
-			self.load(self._pendantFileUploaded)
+			self.loadFile(self._pendantFileUploaded)
 			self._pendantFileUploaded=None
 
 		# Update position if needed

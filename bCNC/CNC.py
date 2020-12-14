@@ -23,6 +23,7 @@ from bpath	import eq,Path, Segment
 from bmath	import *
 from copy	import deepcopy
 from svgcode	import SVGcode
+from abc import abstractstaticmethod
 
 IDPAT    = re.compile(r".*\bid:\s*(.*?)\)")
 PARENPAT = re.compile(r"(\(.*?\))")
@@ -289,6 +290,24 @@ class Probe:
 		lines.append("G0 X%.4f Y%.4f"%(self.xmin, self.ymin))
 		return lines
 
+	@staticmethod
+	# check if value is within range of min and max, also allow provided tolerance
+	def checkValueWithinRange(value, min, max, tolerance = 0.3):
+		# sometimes min is -10, and max is -0.1, so make sure the value is within range
+		if( (value + tolerance ) > min ) and ( value < ( max + tolerance ) ):
+			return True
+		return False
+	 
+	def checkIfGantryWithinWorkArea(self, workx, worky):
+		# allow distance range within 0.1mm ?
+		AllowDistance = 0.8
+		#if ( workx >= self.xmin and workx <= self.xmax )\
+		#	and (  worky >= self.ymin and worky <= self.ymax  ):
+		#	return True
+		if( Probe.checkValueWithinRange(workx, 0, self.xmax, AllowDistance) and \
+			Probe.checkValueWithinRange(worky, 0, self.ymax, AllowDistance) ):
+			return True
+		return False
 	#----------------------------------------------------------------------
 	# Return the code needed to scan for autoleveling
 	# Probe from Top to Bottom
@@ -306,9 +325,19 @@ class Probe:
 		# don't crash the bit and machine!! move Z to  highest safe position first
 		# Z-1 is the highest machine position.  0 is invalid because it's higher than -1.
 		# maybe move these two lines to ....?
-		lines.append( "G53 Z-1")
-		# move to work area 0,0 point of origin 
-		lines.append("G0 X0Y0")
+		# if gantry is already within the range of work area, do not add move to origin command
+		workx = CNC.getWorkX()
+		worky = CNC.getWorkY() 
+		if ( self.checkIfGantryWithinWorkArea( workx, worky) ): 
+			# already inside work area, so no need to move Z to safe place then move to point of origin
+			print("already in work area, no need to add gcode for safely moving to origin.")
+			pass	
+		else:
+			print("Need to move to work area first, adding gcode to safely move to point of origin.")
+			# gantry is outside of work, so need to move Z to safe place then move to point of origin
+			lines.append( "G53 Z-1")
+			# move to work area 0,0 point of origin 
+			lines.append("G0 X0Y0")
 
 		# lines.append( "G0X%.4fY%.4f"%(self.xmin, self.ymax))
 		# must move to point of origin before starting abl
@@ -811,7 +840,7 @@ class CNC:
 			"running"    : False,
 			#"enable6axisopt" : 0,
 		}
-
+    
 	drillPolicy    = 1		# Expand Canned cycles
 	toolPolicy     = 1		# Should be in sync with ProbePage
 					# 0 - send to grbl
@@ -830,6 +859,14 @@ class CNC:
 		self.initPath()
 		self.resetAllMargins()
 
+	@staticmethod
+	def getWorkX():
+		return CNC.vars ["wx"]
+
+	@staticmethod   
+	def getWorkY():
+		return CNC.vars ["wy"]
+
 	#----------------------------------------------------------------------
 	# Update G variables from "G" string
 	#----------------------------------------------------------------------
@@ -840,8 +877,6 @@ class CNC:
 				print(g)
 				g1=g[1:]
 				g1f = float(g1)
-				print("g1f is")
-				print(g1f)
 				CNC.vars["feed"] = g1f
 			elif g[0] == "S":
 				CNC.vars["rpm"] = float(g[1:])
@@ -1340,15 +1375,17 @@ class CNC:
 		self.mval = 0	# reset m command
 
 		for cmd in cmds:
-			try:
-				value = float(cmd[1:])
-			except Exception  as err:
-				# if one line has error, clear the whole gcode.
-				print("CMD error: "+ cmd + ",  " + str(err))
-				#tkMessageBox.showerror(_("File Error"),	_("Gcode error " + cmd + " " +  str(err)))
-				raise Exception("Gcode error: " + str(err))
-
 			c = cmd[0].upper()
+			# $command is grbl command, need to ignore and do not raise an error
+			if( c!='$'):
+				try:
+					value = float(cmd[1:])
+				except Exception  as err:
+						# if one line has error, clear the whole gcode.
+						print("CMD error: "+ cmd + ",  " + str(err))
+						#tkMessageBox.showerror(_("File Error"),	_("Gcode error " + cmd + " " +  str(err)))
+						raise Exception("Gcode error: " + str(err))
+
 			if   c == "X":
 				self.xval = value*self.unit
 				if not self.absolute:
@@ -2362,8 +2399,8 @@ class GCode:
 		if cmds is None:
 			self.blocks[-1].append(line)
 			return
-
-		self.cnc.motionStart(cmds)
+		if( cmds[0][0]!="$"):
+			self.cnc.motionStart(cmds)
 
 		# rapid move up = end of block
 		if self._blocksExist:

@@ -1127,21 +1127,24 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 
 	#-----------------------------------------------------------------------
 	def saveConfig(self):
-		Utils.setFloat("Probe", "xmin", self.probeXmin.get())
-		Utils.setFloat("Probe", "xmax", self.probeXmax.get())
+		# should not save xyz min /max
+		# xmin xmax should always get from gcode file
+		# when gcode is not loaded, should not have xmin/xmax
+		#Utils.setFloat("Probe", "xmin", self.probeXmin.get())
+		#Utils.setFloat("Probe", "xmax", self.probeXmax.get())
 		Utils.setInt(  "Probe", "xn",   self.probeXbins.get())
-		Utils.setFloat("Probe", "ymin", self.probeYmin.get())
-		Utils.setFloat("Probe", "ymax", self.probeYmax.get())
+		#Utils.setFloat("Probe", "ymin", self.probeYmin.get())
+		#Utils.setFloat("Probe", "ymax", self.probeYmax.get())
 		Utils.setInt(  "Probe", "yn",   self.probeYbins.get())
 		Utils.setFloat("Probe", "zmin", self.probeZmin.get())
 		Utils.setFloat("Probe", "zmax", self.probeZmax.get())
 
 	#-----------------------------------------------------------------------
 	def loadConfig(self):
-		self.probeXmin.set(Utils.getFloat("Probe","xmin"))
-		self.probeXmax.set(Utils.getFloat("Probe","xmax"))
-		self.probeYmin.set(Utils.getFloat("Probe","ymin"))
-		self.probeYmax.set(Utils.getFloat("Probe","ymax"))
+		# self.probeXmin.set(Utils.getFloat("Probe","xmin"))
+		# self.probeXmax.set(Utils.getFloat("Probe","xmax"))
+		# self.probeYmin.set(Utils.getFloat("Probe","ymin"))
+		# self.probeYmax.set(Utils.getFloat("Probe","ymax"))
 		self.probeZmin.set(Utils.getFloat("Probe","zmin"))
 		self.probeZmax.set(Utils.getFloat("Probe","zmax"))
 
@@ -1150,7 +1153,7 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 
 		self.probeYbins.delete(0,END)
 		self.probeYbins.insert(0,max(2,Utils.getInt("Probe","yn",5)))
-		self.change(False)
+		self.updateProbeParams(False)
 
 	#-----------------------------------------------------------------------
 	def getMargins(self, event=None):
@@ -1161,9 +1164,10 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		self.draw()
 
 	#-----------------------------------------------------------------------
-	def change(self, verbose=True):
+	# return true if successful
+	def updateProbeParams(self, verbose=True):
 		probe = self.app.gcode.probe
-		error = False
+		ok = True
 		try:
 			probe.xmin = float(self.probeXmin.get())
 			probe.xmax = float(self.probeXmax.get())
@@ -1175,14 +1179,14 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 				tkMessageBox.showerror(_("Probe Error"),
 						_("Invalid X probing region"),
 						parent=self.winfo_toplevel())
-			error = True
+			ok = False
 
 		if probe.xmin >= probe.xmax:
 			if verbose:
 				tkMessageBox.showerror(_("Probe Error"),
 						_("Invalid X range [xmin>=xmax]"),
 						parent=self.winfo_toplevel())
-			error = True
+			ok = False
 
 		try:
 			probe.ymin = float(self.probeYmin.get())
@@ -1195,14 +1199,14 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 				tkMessageBox.showerror(_("Probe Error"),
 						_("Invalid Y probing region"),
 						parent=self.winfo_toplevel())
-			error = True
+			ok = False
 
 		if probe.ymin >= probe.ymax:
 			if verbose:
 				tkMessageBox.showerror(_("Probe Error"),
 						_("Invalid Y range [ymin>=ymax]"),
 						parent=self.winfo_toplevel())
-			error = True
+			ok = False
 
 		try:
 			probe.zmin  = float(self.probeZmin.get())
@@ -1212,35 +1216,35 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 				tkMessageBox.showerror(_("Probe Error"),
 					_("Invalid Z probing region"),
 					parent=self.winfo_toplevel())
-			error = True
+			ok = False
 		
 		# normally ,  the Max value	must be larger than 0 (>0), otherwise the probe will hit the material/bed.
 		SmallestMaxValueAllowed=0.4	
 		if probe.zmax < SmallestMaxValueAllowed:
 			tkMessageBox.showerror(_("Probe Error"),
-						_("Invalid Z Max, it must be 0.4 or larger so it is above the mill surface"),
+						_("Invalid Z Max, it must be " + str(SmallestMaxValueAllowed) +" or larger so it is above the mill surface"),
 						parent=self.winfo_toplevel())
-			error = True
+			ok = False
 			
 		if probe.zmin >= probe.zmax:
 			if verbose:
 				tkMessageBox.showerror(_("Probe Error"),
 						_("Invalid Z range [zmin>=zmax]"),
 						parent=self.winfo_toplevel())
-			error = True
+			ok = False
 
 		if ProbeCommonFrame.probeUpdate():
 			if verbose:
 				tkMessageBox.showerror(_("Probe Error"),
 					_("Invalid probe feed rate"),
 					parent=self.winfo_toplevel())
-			error = True
+			ok = False
 
-		return error
+		return ok
 
 	#-----------------------------------------------------------------------
 	def draw(self):
-		if not self.change():
+		if self.updateProbeParams():
 			self.event_generate("<<DrawProbe>>")
 
 	#-----------------------------------------------------------------------
@@ -1264,7 +1268,13 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 	#-----------------------------------------------------------------------
 	def autoLevelProbe(self, event=None):
 
-		if self.change(): return
+		if ( self.app.gcode.blocks == None or len(self.app.gcode.blocks )<=0 ):
+			tkMessageBox.showerror(_("File Error"),	"GCode is empty, please load GCode File first before do Auto Bed Leveling."  )
+			return
+
+		if not self.updateProbeParams():
+			tkMessageBox.showerror(_("Value Error"),	"Invalid Xmin Xmax Ymin Ymax Zmin Zmax values"  )
+			return
 		
 		print("auto bed level scan()")
 		# show warning message before probing, remind user to connect wires
@@ -1279,13 +1289,14 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		   
 		self.event_generate("<<DrawProbe>>")
 		# absolute
-		self.app.run(lines=self.app.gcode.probe.getGCodeForAutoLevelProbe())
+		ablGCode = self.app.gcode.probe.getGCodeForAutoLevelProbe()
+		self.app.runGcode(lines=ablGCode )
 
 	#-----------------------------------------------------------------------
 	#Move gantry by the autolevel margins
 	#-----------------------------------------------------------------------
 	def moveAlongMgins(self, event=None):
-		if self.change(): return
+		if not self.updateProbeParams(): return
 		self.app.run(lines=self.app.gcode.probe. getGCodeForMoveAlongMargins())
 
 

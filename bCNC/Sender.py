@@ -486,7 +486,7 @@ class Sender:
 	#----------------------------------------------------------------------
 	# Open serial port
 	#----------------------------------------------------------------------
-	def open(self, device, baudrate):
+	def openSerialPort(self, device, baudrate):
 		#self.serial = serial.Serial(
 		self.serial = serial.serial_for_url(
 						device.replace('\\', '\\\\'), #Escape for windows
