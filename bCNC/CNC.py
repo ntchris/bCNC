@@ -40,6 +40,7 @@ MSG    = 3
 WAIT   = 4
 UPDATE = 5
 
+
 XY   = 0
 XZ   = 1
 YZ   = 2
@@ -161,6 +162,7 @@ class Probe:
 		self.zeroed = False	# if probe was zeroed at any location
 		self.start  = False	# start collecting probes
 		self.saved  = False
+
 
 	#----------------------------------------------------------------------
 	def clear(self):
@@ -293,26 +295,65 @@ class Probe:
 	@staticmethod
 	# check if value is within range of min and max, also allow provided tolerance
 	def checkValueWithinRange(value, min, max, tolerance = 0.3):
+		# accept min max in wrong order, if so, swap.
+		if ( min > max ):
+			temp = min
+			min = max
+			max = temp
 		# sometimes min is -10, and max is -0.1, so make sure the value is within range
 		if( (value + tolerance ) > min ) and ( value < ( max + tolerance ) ):
 			return True
 		return False
-	 
-	def checkIfGantryWithinWorkArea(self, workx, worky):
+	
+	def checkIfPointInsideWorkArea(self, x, y):
 		# allow distance range within 0.1mm ?
 		AllowDistance = 0.8
 		#if ( workx >= self.xmin and workx <= self.xmax )\
 		#	and (  worky >= self.ymin and worky <= self.ymax  ):
 		#	return True
-		if( Probe.checkValueWithinRange(workx, 0, self.xmax, AllowDistance) and \
-			Probe.checkValueWithinRange(worky, 0, self.ymax, AllowDistance) ):
+		if( Probe.checkValueWithinRange(x, 0, self.xmax, AllowDistance) and \
+			Probe.checkValueWithinRange(y, 0, self.ymin, AllowDistance) ):
 			return True
 		return False
+		 
+	def checkIfGantryInsideWorkArea(self, allowDistance = 0.8):
+		# allow distance range within this range
+		allowDist =  allowDistance
+		x = CNC.getWorkX()
+		y = CNC.getWorkY() 
+		#if ( workx >= self.xmin and workx <= self.xmax )\
+		#	and (  worky >= self.ymin and worky <= self.ymax  ):
+		#	return True
+		result = self.checkIfPointInsideWorkArea(x, y)
+		return result
+
+	def getGCodeLinesForMoveToWorkAreaMidPoint(self):
+		midx, midy = self.getWorkAreaMidPoint()
+		gcode= self.getGCodeLinesForMoveToPoint(midx, midy)
+		return gcode
+		
+	def getGCodeLinesForMoveToPoint(self, x,y):
+		lines=[]
+		lines.append("G0Z%.4f"%(self.zmax))
+		lines.append("G0X%.4fY%.4f"%(x,y))
+		lines.append(CNC.LOCALCOMMAND.WAIT)
+		return lines
+
+	# return lines array for probe xy gcode
+	def getGcodeLinesForProbeForPoint(self, x,y):
+		
+		lines= self.getGCodeLinesForMoveToPoint(x,y)		
+		lines.append(CNC.LOCALCOMMAND.WAIT)	# added for smoothie
+		#  "prbcmd"     : "G38.2",
+		lines.append("%sZ%.4fF%g"%(CNC.vars["prbcmd"], self.zmin, CNC.vars["prbfeed"]))
+		lines.append(CNC.LOCALCOMMAND.WAIT)	# added for smoothie
+		return lines
+	
 	#----------------------------------------------------------------------
 	# Return the code needed to scan for autoleveling
 	# Probe from Top to Bottom
 	#----------------------------------------------------------------------
-	def getGCodeForAutoLevelProbe(self):
+	def getGCodeForAutoLevelProbeWorkArea(self):
 		self.clear()
 		self.start = True
 		self.makeMatrix()
@@ -320,49 +361,61 @@ class Probe:
 		xstep = self._xstep
 		# gcode to enable stepper motor lock
 		lines = []
-		lines.append("$1=255")
-
-		# don't crash the bit and machine!! move Z to  highest safe position first
-		# Z-1 is the highest machine position.  0 is invalid because it's higher than -1.
-		# maybe move these two lines to ....?
-		# if gantry is already within the range of work area, do not add move to origin command
-		workx = CNC.getWorkX()
-		worky = CNC.getWorkY() 
-		if ( self.checkIfGantryWithinWorkArea( workx, worky) ): 
-			# already inside work area, so no need to move Z to safe place then move to point of origin
-			print("already in work area, no need to add gcode for safely moving to origin.")
-			pass	
-		else:
-			print("Need to move to work area first, adding gcode to safely move to point of origin.")
-			# gantry is outside of work, so need to move Z to safe place then move to point of origin
-			lines.append( "G53 Z-1")
-			# move to work area 0,0 point of origin 
-			lines.append("G0 X0Y0")
-
-		# lines.append( "G0X%.4fY%.4f"%(self.xmin, self.ymax))
-		# must move to point of origin before starting abl
 
         # do auto bed leveling from 0,0
 		print(" ymin: "+ str(self.ymin )+ " ymax: " + str( self.ymax) )
 		for j in range(self.yn):
 			y = self.ymax - self._ystep*j
 			for i in range(self.xn):
-				lines.append("G0Z%.4f"%(self.zmax))
-				lines.append("G0X%.4fY%.4f"%(x,y))
-				lines.append("%wait")	# added for smoothie
-				lines.append("%sZ%.4fF%g"%(CNC.vars["prbcmd"], self.zmin, CNC.vars["prbfeed"]))
-				lines.append("%wait")	# added for smoothie
+				probegcodelist = self.getGcodeLinesForProbeForPoint(x,y)
+				lines.extend( probegcodelist )
 				x += xstep
 			x -= xstep
 			xstep = -xstep
-		lines.append("G0Z%.4f"%(self.zmax))
-		lines.append("G0 X0 Y0")
+
         # gcode to disable stepper motor lock
-		lines.append("$1=254")
+		# lines.append("$1=254")
 		return lines
 
+	def getWorkAreaMidPoint(self):
+		midX = (self.xmin + self.xmax)/2.0
+		midY = (self.ymin + self.ymax)/2.0
+		return midX, midY
 
+	def getGCodeForWorkAreaMidPointProbe(self):
+		midX, midY = self.getWorkAreaMidPoint()
+		print("midX midY is" + str(midX) + " " + str(midY))
+		# move to mid point, probe , but do not move up
+		probegcodelist = self.getGcodeLinesForProbeForPoint(midX,midY)
+		# probegcodelist.append("G0Z%.4f"%(self.zmax))
+		return probegcodelist
+	
+	def getGCodeForSettingZEqZero(self):
+		setZ0Gcode = []
+		setZ0Gcode.append("%wait"  )
+		setZ0Gcode.append("%wait"  )
+		setZ0Gcode.append("%wait"  )
+		# probe and set Z=0
+		setZ0Gcode.append( "G10L20P1Z0" )
+		setZ0Gcode.append("%wait"  )
+		setZ0Gcode.append("%wait"  )
+		setZ0Gcode.append("%wait"  )
+		return setZ0Gcode
+	# after probing done, move bit up so grbl won't enter alarm state
+	def getGCodeForMovingZToProbeZmax(self):
 
+		gcode = "G0Z%.4f"%(self.zmax)
+		return gcode
+
+		 # after probing done, move bit up so grbl won't enter alarm state
+	def getGCodeForMovingZUpZmax(self):
+		gcodeZ=[]
+		gcodeZ.append("G90")
+		gcodeZ.append("G0Z%d"%(CNC.vars['safe']))
+		return  gcodeZ
+		# gcode.append("G0X0Y0")
+		# gcode.append("G0Z0")
+		
 	#----------------------------------------------------------------------
 	# Return the code needed to scan for autoleveling
 	# The original ABL, probe from bottom upward, not easy to check upper border
@@ -402,7 +455,7 @@ class Probe:
 	#----------------------------------------------------------------------
 	# Add a probed point to the list and the 3D matrix
 	#----------------------------------------------------------------------
-	def add(self, x,y,z):
+	def addAblProbePoints(self, x,y,z):
 		if not self.start: return
 		i = round((x-self.xmin) / self._xstep)
 		if i<0.0 or i>self.xn: return
@@ -761,6 +814,13 @@ class CNC:
 	comment        = ""	# last parsed comment
 	developer      = False
 	drozeropad     = 0
+	
+	# we can add some local commands along with gcode in the queue
+	class LOCALCOMMAND:
+		KeySymbol ="%"
+		WAIT= KeySymbol +"wait"
+		SETZERO= KeySymbol +"setzero"
+
 	vars           = {
 			"prbx"       : 0.0,
 			"prby"       : 0.0,
@@ -1234,7 +1294,11 @@ class CNC:
 			else:
 				cmd  = None
 				args = None
-			if cmd=="%wait":
+
+			if cmd==CNC.LOCALCOMMAND.SETZERO:
+				xy = args.split()				 
+				return (CNC.LOCALCOMMAND.SETZERO, xy)
+			elif cmd==CNC.LOCALCOMMAND.WAIT:
 				return (WAIT,)
 			elif cmd=="%msg":
 				if not args: args = None
@@ -1243,8 +1307,10 @@ class CNC:
 				return (UPDATE, args)
 			elif line.startswith("%if running") and not CNC.vars["running"]:
 				# ignore if running lines when not running
-				return None
+				return None	
 			else:
+				pass
+
 				try:
 					return compile(line[1:],"","exec")
 				except Exception as e:
@@ -1257,7 +1323,7 @@ class CNC:
 			try:
 				return compile(line,"","exec")
 			except:
-				# FIXME show the error!!!!
+				# FIXME show the error!
 				return None
 
 		# commented line
@@ -1305,7 +1371,7 @@ class CNC:
 						try:
 							out.append(compile(expr,"","eval"))
 						except:
-							# FIXME show the error!!!!
+							# FIXME show the error!
 							pass
 						#out.append("<<"+expr+">>")
 						expr = ""
@@ -1324,7 +1390,7 @@ class CNC:
 						try:
 							return compile(line,"","exec")
 						except:
-							# FIXME show the error!!!!
+							# FIXME show the error!
 							return None
 			elif ch == ';':
 				# Skip everything after the semicolon on normal lines
@@ -1545,7 +1611,7 @@ class CNC:
 			if AB != 0.0:
 				return Cx-OC*ABy/AB, Cy + OC*ABx/AB
 			else:
-				# Error!!!
+				# Error!
 				return x,y
 		else:
 			# Center
@@ -1737,7 +1803,7 @@ class CNC:
 			self.dy = 0
 			self.dz = 0
 
-		# FIXME L is not taken into account for repetitions!!!
+		# FIXME L is not taken into account for repetitions!
 		elif self.gcode in (81,82,83):
 			# FIXME Assuming only on plane XY
 			if self.absolute:
@@ -2402,18 +2468,16 @@ class GCode:
 		if( cmds[0][0]!="$"):
 			self.cnc.motionStart(cmds)
 
-		# rapid move up = end of block
-		if self._blocksExist:
-			self.blocks[-1].append(line)
-		elif self.cnc.gcode == 0 and self.cnc.dz > 0.0:
-			self.blocks[-1].append(line)
+		if "$1=" in cmds[0]:
+			self.blocks[-1].append(CNC.LOCALCOMMAND.WAIT)
+
+		self.blocks[-1].append(line)
+		
+		if self.cnc.gcode == 0 and self.cnc.dz > 0.0:
 			self.blocks.append(Block())
 		elif self.cnc.gcode == 0 and len(self.blocks)==1:
 			self.blocks.append(Block())
-			self.blocks[-1].append(line)
-		else:
-			self.blocks[-1].append(line)
-
+		
 		self.cnc.motionEnd()
 
 	#----------------------------------------------------------------------
@@ -2430,9 +2494,13 @@ class GCode:
 		self.cnc.resetAllMargins()
 		self._blocksExist = False
 		i = 0
+		# insert a $1=255 to make sure stepper motor is lock and wont skip step
+		self._addLine("$1=255")
 		for line in f:
 			try:
-				r = self._addLine(line[:-1].replace("\x0d",""))
+				#templine = line[:-1].replace("\x0d","")
+				templine = line.strip()
+				r = self._addLine( templine  )
 			except Exception as err:
 				# add file name and line number into the current error
 				# tkMessageBox.showerror(_("File Error"),	_( filename + " has wrong gcode, \n line number "  +str(i) +" "+  line + "\n" + str(err  )))
@@ -2444,6 +2512,10 @@ class GCode:
 				return False
 			i+=1
 		self._trim()
+		# insert a $1=254 at the end to make sure stepper motor is unlock /power off, so not wasting power and heat up the drivers.
+		# must add a wait so the controller is idle when running the $1=254 command
+		self._addLine(CNC.LOCALCOMMAND.WAIT)
+		self._addLine("$1=254")
 		f.close()
 		return True
 

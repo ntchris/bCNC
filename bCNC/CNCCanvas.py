@@ -1446,7 +1446,7 @@ class CNCCanvas(Canvas, object):
 	# Draw margins of selected blocks
 	#----------------------------------------------------------------------
 	def drawMargin(self):
-		print("def drawMargin(self):")
+		#print("def drawMargin(self):")
 		if self._margin:  self.delete(self._margin)
 		if self._amargin: self.delete(self._amargin)
 		self._margin = self._amargin = None
@@ -2005,8 +2005,7 @@ class CanvasFrame(Frame):
 
 		self.draw_axes.set(    bool(int(Utils.getBool("Canvas", "axes",    True))))
 		self.draw_grid.set(    bool(int(Utils.getBool("Canvas", "grid",    True))))
-		self.draw_margin.set(  bool(int(Utils.getBool("Canvas", "margin",  True))))
-		#self.draw_probe.set(   bool(int(Utils.getBool("Canvas", "probe",   False))))
+		self.draw_margin.set(  bool(int(Utils.getBool("Canvas", "margin",  True))))		
 		self.draw_paths.set(   bool(int(Utils.getBool("Canvas", "paths",   True))))
 		self.draw_rapid.set(   bool(int(Utils.getBool("Canvas", "rapid",   True))))
 		self.draw_workarea.set(bool(int(Utils.getBool("Canvas", "workarea",True))))

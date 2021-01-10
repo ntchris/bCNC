@@ -42,7 +42,7 @@ try:
 except ImportError:
 	from queue import *
 
-from CNC import WAIT, MSG, UPDATE, WCS, CNC, GCode
+from CNC import WAIT, MSG, UPDATE, WCS, CNC, GCode, Probe
 import Utils
 import Pendant
 from _GenericGRBL import ERROR_CODES
@@ -547,6 +547,7 @@ class Sender:
 	# WARNING: it has to be a single line!
 	#----------------------------------------------------------------------
 	def sendGCode(self, cmd):
+
 		if self.serial and not self.running:
 			if isinstance(cmd,tuple):
 				self.queue.put(cmd)
@@ -641,6 +642,8 @@ class Sender:
 		self._stop = True
 		# if we are in the process of submitting do not do anything
 		if self._runLines != sys.maxsize:
+			if self.serial== None :
+		 		return
 			self.purgeController()
 
 	#----------------------------------------------------------------------
@@ -679,7 +682,11 @@ class Sender:
 		tr = tg = time.time()		# last time a ? or $G was send to grbl
 
 		while self.thread:
+			# don't run while like crazy?
+			time.sleep( 0.001)
+
 			t = time.time()
+
 			# refresh machine position?
 			if t-tr > SERIAL_POLL:
 				self.mcontrol.viewStatusReport()
@@ -693,15 +700,28 @@ class Sender:
 			if tosend is None and not self.sio_wait and not self._pause and self.queue.qsize()>0:
 				try:
 					tosend = self.queue.get_nowait()
-					#print "+++",repr(tosend)
+					
 					if isinstance(tosend, tuple):
 						#print "gcount tuple=",self._gcount
 						# wait to empty the grbl buffer and status is Idle
+						
 						if tosend[0] == WAIT:
 							# Don't count WAIT until we are idle!
 							self.sio_wait = True
 							#print "+++ WAIT ON"
 							#print "gcount=",self._gcount, self._runLines
+						elif  tosend[0] == CNC.LOCALCOMMAND.SETZERO:
+							# set Zero like the ABL tab ZERO button
+							arg =tosend[1]
+							# unpack xy from arg list, note, it's string
+							x,y=arg
+							x = float(x)
+							y = float(y)
+
+							print("setting zero" + CNC.LOCALCOMMAND.SETZERO+ " " + str(x) + " "+str(y))							
+							self.gcode.probe.setZero(x, y)
+							self._gcount += 1
+
 						elif tosend[0] == MSG:
 							# Count executed commands as well
 							self._gcount += 1
@@ -784,6 +804,7 @@ class Sender:
 
 				#print "<R<",repr(line)
 				#print "*-* stack=",sline,"sum=",sum(cline),"wait=",wait,"pause=",self._pause
+
 				if not line:
 					pass
 				elif self.mcontrol.parseLine(line, cline, sline):
@@ -826,3 +847,5 @@ class Sender:
 					sline.append(tosend)
 					cline.append(len(tosend))
 					tg = t
+		# end of while
+

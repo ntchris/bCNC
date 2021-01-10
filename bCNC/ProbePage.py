@@ -12,7 +12,7 @@ __email__  = "vvlachoudis@gmail.com"
 import sys
 # import time
 import math
-
+import time
 try:
 	from Tkinter import *
 	import tkMessageBox
@@ -27,6 +27,9 @@ import Ribbon
 import tkExtra
 
 import CNCRibbon
+
+# for advance button action handling
+import AdvanceButtonHandler
 
 PROBE_CMD = [	_("G38.2 stop on contact else error"),
 		_("G38.3 stop on contact"),
@@ -134,6 +137,7 @@ class ProbeTabGroup(CNCRibbon.ButtonGroup):
 #===============================================================================
 class AutolevelGroup(CNCRibbon.ButtonGroup):
 	def __init__(self, master, app):
+		
 		CNCRibbon.ButtonGroup.__init__(self, master, "Probe:Autolevel", app)
 		self.label["background"] = Ribbon._BACKGROUND_GROUP2
 		self.grid3rows()
@@ -210,7 +214,7 @@ class AutolevelGroup(CNCRibbon.ButtonGroup):
 				background=Ribbon._BACKGROUND)
 		b.grid(row=row, column=col, rowspan=3, padx=0, pady=0, sticky=NSEW)
 		self.addWidget(b)
-		tkExtra.Balloon.set(b, _("Auto Bed Leveling, Probe the gcode area  for level information on Z plane"))
+		tkExtra.Balloon.set(b, _("Auto Bed Leveling, set mid point of work area z=0, Probe the gcode area  for level information on Z plane"))
 
 
 #===============================================================================
@@ -492,7 +496,7 @@ class ProbeFrame(CNCRibbon.PageFrame):
 				image=Utils.icons["probe32"],
 				text=_("Probe"),
 				compound=LEFT,
-				command=self.probe,
+				command=self.probeOnePoint,
 #				width=48,
 				padx=5, pady=0)
 		b.grid(row=row, column=col, padx=1, sticky=EW)
@@ -718,7 +722,7 @@ class ProbeFrame(CNCRibbon.PageFrame):
 	#-----------------------------------------------------------------------
 	# Probe one Point
 	#-----------------------------------------------------------------------
-	def probe(self, event=None):
+	def probeOnePoint(self, event=None):
 		# show warning message before probing, remind user to connect wires	
 		ans = self.warnMessage()
 		print("ans is " + str(ans))			
@@ -1004,6 +1008,8 @@ class ProbeFrame(CNCRibbon.PageFrame):
 #===============================================================================
 class AutolevelFrame(CNCRibbon.PageFrame):
 	def __init__(self, master, app):
+		self.abhThread = None
+
 		CNCRibbon.PageFrame.__init__(self, master, "Probe:Autolevel", app)
 
 		lframe = LabelFrame(self, text=_("Autolevel"), foreground="DarkBlue")
@@ -1219,7 +1225,7 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 			ok = False
 		
 		# normally ,  the Max value	must be larger than 0 (>0), otherwise the probe will hit the material/bed.
-		SmallestMaxValueAllowed=0.4	
+		SmallestMaxValueAllowed=0.3	
 		if probe.zmax < SmallestMaxValueAllowed:
 			tkMessageBox.showerror(_("Probe Error"),
 						_("Invalid Z Max, it must be " + str(SmallestMaxValueAllowed) +" or larger so it is above the mill surface"),
@@ -1253,6 +1259,7 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		y = CNC.vars["wy"]
 		self.app.gcode.probe.setZero(x,y)
 		self.draw()
+		print("done setting current point abl zero" + str(x) + " "+ str(y) )
 
 	#-----------------------------------------------------------------------
 	def clear(self, event=None):
@@ -1263,23 +1270,19 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		self.app.gcode.probe.clear()
 		self.draw()
 
-	#-----------------------------------------------------------------------
-	# Probe an X-Y area
-	#-----------------------------------------------------------------------
-	def autoLevelProbe(self, event=None):
-
+	
+	def advanceAutoBedLevelingAndProbeMidPointButton(self, event=None):
 		if ( self.app.gcode.blocks == None or len(self.app.gcode.blocks )<=0 ):
-			tkMessageBox.showerror(_("File Error"),	"GCode is empty, please load GCode File first before do Auto Bed Leveling."  )
+			tkMessageBox.showerror(_("File Error"),	"GCode is empty, please load GCode File first before do Auto Bed Leveling, so we know the work area size"  )
 			return
 
 		if not self.updateProbeParams():
 			tkMessageBox.showerror(_("Value Error"),	"Invalid Xmin Xmax Ymin Ymax Zmin Zmax values"  )
 			return
 		
-		print("auto bed level scan()")
 		# show warning message before probing, remind user to connect wires
 		ans = tkMessageBox.askquestion(_("Auto Bed Leveling Warning"),
-				_("Starting Auto Bed Leveling, Please make sure Probe wires is connected, Continue Auto Bed Leveling?"),
+				_("Starting Advance Auto Bed Leveling. It will\n1 probe the mid point of the work area and set Z=0 (the same as Probe Tab Z=0 button does). \n2 probe the whole work area,\n3 at last it will use the mid point to SetZero ( the same as the ABL ZERO button does.)\n Please make sure Probe wires is connected, \n Warning: Must make sure work X Y have been set 0 in the right place, and work Z is Correct(ie do a Home and probe first)\n Continue Advance Auto Bed Leveling?"),
 				icon='warning',
 				parent=self.winfo_toplevel())
 		if ( ans!= tkMessageBox.YES):
@@ -1289,9 +1292,197 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		   
 		self.event_generate("<<DrawProbe>>")
 		# absolute
-		ablGCode = self.app.gcode.probe.getGCodeForAutoLevelProbe()
-		self.app.runGcode(lines=ablGCode )
+		ablGCode = []
+		## remove below
+		#setZeroLocalCommand =  CNC.LOCALCOMMAND.SETZERO +" "+ str(1) +" "+ str(2)
+		#ablGCode.append( setZeroLocalCommand )
+		
+		#self.app.runGcode(lines=ablGCode)
+		#return
+		# testing
+		
+		# go to point of origin (0,0) first
+		# don't crash the bit and machine!! move Z to  highest safe position first
+		# Z-1 is the highest machine position.  0 is invalid because it's higher than -1.
+		# maybe move these two lines to ....?
+		# if gantry is already within the range of work area, do not add move to origin command
+		if ( self.app.gcode.probe.checkIfGantryInsideWorkArea() ): 
+			# already inside work area, so no need to move Z to safe place then move to point of origin
+			print("already in work area, no need to add gcode for safely moving to origin.")
+			pass	
+		else:
+			print("Need to move to work area first, adding gcode to safely move to point of origin.")
+			# gantry is outside of work area, so need to move Z to safe place then move to point of origin
+			ablGCode.append( "G53 Z-1")
+			# move to work area 0,0 point of origin 
+			ablGCode.append("G0 X0Y0")
 
+		midpointAblGCode = self.app.gcode.probe.getGCodeForWorkAreaMidPointProbe()
+		print("mid point probe gcode")
+		print(midpointAblGCode)
+		ablGCode.extend( midpointAblGCode )
+		setZ0Gcode = self.app.gcode.probe.getGCodeForSettingZEqZero()
+		ablGCode.extend(setZ0Gcode)
+		# set work area xy =0 (Button ZERO),
+		#since we have already probed mid point and set z=0, so xy zero is not needed ??
+
+		# we are doing the step one of the ABL , probing the whole work area
+		# step one , probe work area
+		ablGCode.append(self.app.gcode.probe.getGCodeForMovingZToProbeZmax())
+
+		gcodeAblWorkArea = self.app.gcode.probe.getGCodeForAutoLevelProbeWorkArea()
+		ablGCode.extend(gcodeAblWorkArea)
+
+		# move to mid point
+		# moveToMidpointGCode = self.app.gcode.probe.getGCodeLinesForMoveToWorkAreaMidPoint()
+		# ablGCode.extend( moveToMidpointGCode )
+		midx, midy = self.app.gcode.probe.getWorkAreaMidPoint()
+ 		# set Zero using mid point
+ 
+		setZeroLocalCommand =  CNC.LOCALCOMMAND.SETZERO +" "+ str(midx) +" "+ str(midy)
+		ablGCode.append( setZeroLocalCommand )
+		# finally move to point of origin (work area 0,0 ) 
+		ablGCode.append(self.app.gcode.probe.getGCodeForMovingZToProbeZmax())
+		ablGCode.append("G0 X0Y0")
+		
+		self.app.runGcode(lines=ablGCode)
+		print("start running ABL probe")
+		# won't return until finish
+		#self.startMonitorAblStatusUsingThread()
+
+		return
+	# end of 	def advanceAutoBedLevelingAndProbeMidPoint(self):
+	#-----------------------------------------------------------------------
+	def abhCheckingFunction(self):
+		actionItem =[]
+		probMidPointGcode = self.app.gcode.probe.getGCodeForWorkAreaMidPointProbe()
+		actionItem.extend(  probMidPointGcode )
+		waitTimeSec = 0.5
+		while self.cncVars["running"]:                
+			print("still running...sleep")
+			time.sleep( waitTimeSec )
+			
+		print("not running")       
+		return
+	
+	def startMonitorAblStatusUsingThread(self):
+		if( self.abhThread !=None):
+			# thread is already running or runed, which can only start ONCE.
+			print("abh thread is already running")
+			return
+		
+		abhThread = Threading.Thread(target=self.abhCheckingFunction)		
+		
+		abhThread.start()
+		
+ 
+	# !!!  
+	def monitorAblStatusUsingThreadZZZ(self):
+		self.abh = AdvanceButtonHandler.AdvanceButtonHandler(app, CNC.vars)
+		probMidPointGcode = self.app.gcode.probe.getGCodeForWorkAreaMidPointProbe()
+		self.abh.addActionItem( probMidPointGcode )
+		
+		self.abh.start()
+		##		RuntimeError: threads can only be started once
+
+		print("thread started")
+		return
+
+	def monitorAblStatusZZZ( self ):
+		
+		self.waitForABLWorkAreaFinish();
+		
+		print("monitorAblStatusUsingWhileWait")
+		self.waitForCNCVarRunningFinish()
+		print("Done  ABL step1")
+		# probing work area is now done.
+		self.app.gcode.probe.ablProbingWorkArea = False
+					
+		self.app.gcode.probe.ablProbingZToSetZ0 = True			
+		probMidPointGcode = self.app.gcode.probe.getGCodeForWorkAreaMidPointProbe()
+		# quiet mode, so don't ask user to confirm again
+		print("running probe mid point")
+		self.app.runGcode(lines=probMidPointGcode, quiet = True)	
+		time.sleep(0.5)
+		self.waitForCNCVarRunningFinish()
+				# finished probing mid point of work area
+		print("ABL step2: probing Mid Point done, now bit is touching PCB")
+		self.app.gcode.probe.ablProbingZToSetZ0 = False
+		# mid point probe is done , set z=0
+		# button Z=0
+		print("setting Z=0")
+		self.app.mcontrol._wcsSet(None,None,"0",None,None,None)
+		# need set Zero in current loc
+		# button Zero in ABL  ( not Z=0 button)                                                       
+		time.sleep(0.5)
+		# move Z up a little 
+		moveUpZ = self.app.gcode.probe.getGCodeForMovingZToProbeZmax()
+		self.sendGCode(moveUpZ)
+		print("setting X Y area zero")
+		self.setZero()
+		time.sleep(0.5)
+		moveToOrigin= "G0X0Y0"
+		self.sendGCode(moveToOrigin)
+		time.sleep(0.5)
+
+		# end of monitorAblStatusUsingWhileWait
+	
+	# GUI is messed up frozen	
+	def monitorAblStatusUsingAfter( self ):
+		MONITOR_AFTER =  500	# ms !!!!
+		
+		if(	self.app.gcode.probe.ablProbingWorkArea ):
+
+			if (  CNC.vars["running"] ):
+				# waiting for probing work area
+				# self.after(MONITOR_AFTER, self.monitorAblStatus)
+				print("running ABL step1")
+			else:
+
+				# Done waiting for probing work area, move to mid point to probe
+				self.app.gcode.probe.ablProbingWorkArea = False
+				self.app.gcode.probe.ablProbingZToSetZ0 = True
+				print("Done  ABL step1")
+				# important to sleep for a while to let the command queue to process/enqueue new command etc.
+				# if too short, has error, skipping the whole command
+				time.sleep(1.5)
+				print("running probe mid point")
+				probMidPointGcode = self.app.gcode.probe.getGCodeForWorkAreaMidPointProbe()
+				# quiet mode, so don't ask user to confirm again
+				self.app.runGcode(lines=probMidPointGcode, quiet = True)
+
+		elif( self.app.gcode.probe.ablProbingZToSetZ0 ):
+			if (  CNC.vars["running"] ):
+				# waiting for probing mid point of work area
+				print("running ABL step2")
+			else:
+				# finished probing mid point of work area
+				print("ABL step2: probing Mid Point done, now bit is touching PCB")
+				self.app.gcode.probe.ablProbingZToSetZ0 = False
+				# mid point probe is done , set z=0
+				# button Z=0
+				print("setting Z=0")
+				self.app.mcontrol._wcsSet(None,None,"0",None,None,None)
+				# need set Zero in current loc
+				# button Zero in ABL  ( not Z=0 button)
+				time.sleep(0.5)
+				# move Z up a little 
+				moveUpZ = self.app.gcode.probe.getGCodeForMovingZToProbeZmax()
+				self.sendGCode(moveUpZ)
+				print("setting X Y area zero")
+				self.setZero()
+				time.sleep(0.5)
+				moveToOrigin= "G0X0Y0"
+				self.sendGCode(moveToOrigin)
+				time.sleep(0.5)
+				# mvoe Z to point of origin
+				#time.sleep(1)
+				#self.app.runGcode(lines=moveUpToOrigin, quiet = True)
+
+		if (  CNC.vars["running"] or self.app.gcode.probe.ablProbingWorkArea or self.app.gcode.probe.ablProbingZToSetZ0 ):
+			self.after(MONITOR_AFTER, self.monitorAblStatus)
+		return
+		
 	#-----------------------------------------------------------------------
 	#Move gantry by the autolevel margins
 	#-----------------------------------------------------------------------

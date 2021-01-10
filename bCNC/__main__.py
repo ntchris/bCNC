@@ -158,7 +158,7 @@ class Application(Toplevel,Sender):
 		f.pack(side=BOTTOM, fill=X)
 		self.cmdlabel = Label(f, text=_("Command:"))
 		self.cmdlabel.pack(side=LEFT)
-		self.command = Entry(f, relief=SUNKEN, background="White")#!!!
+		self.command = Entry(f, relief=SUNKEN, background="White")
 		self.command.pack(side=RIGHT, fill=X, expand=YES)
 		self.command.bind("<Return>",		self.cmdExecute)
 		self.command.bind("<Up>",		self.commandHistoryUp)
@@ -343,7 +343,8 @@ class Application(Toplevel,Sender):
 		self.bind('<<GetAutolevelMargins>>',self.autolevel.getMargins)
 		self.bind('<<AutolevelZero>>',	self.autolevel.setZero)
 		self.bind('<<AutolevelClear>>',	self.autolevel.clear)
-		self.bind('<<AutolevelProbe>>',	self.autolevel.autoLevelProbe)
+
+		self.bind('<<AutolevelProbe>>',	self.autolevel.advanceAutoBedLevelingAndProbeMidPointButton)
 		self.bind('<<MoveAlongMgins>>',	self.autolevel.moveAlongMgins)
 
 		self.bind('<<CameraOn>>',	self.canvas.cameraOn)
@@ -2238,20 +2239,16 @@ class Application(Toplevel,Sender):
 		# when running gcode for milling, NOT for probing
 		# show a warning message for user to remove probe wires
 		if(lines==None):
-			print("Running Gcode")	
 			ans = tkMessageBox.askquestion(_("Start Running"),
 				_("Start Running Gcode, Remove Probe Wires!"),
 				icon='warning',
 				parent=self.winfo_toplevel())
 			if ( ans!= tkMessageBox.YES):
-				tkMessageBox.showerror(_("RUN Error"),
-					_("Run is Cancelled."))
+				tkMessageBox.showerror(_("RUN Error"), 	_("Run is Cancelled."))
 				return
-		   
 		
 		self.cleanAfter = True	#Clean when this operation stops
 		print("Will clean after this operation")
-
 		if self.serial is None and not CNC.developer:
 			tkMessageBox.showerror(_("Serial Error"),
 				_("Serial is not connected"),
@@ -2286,7 +2283,7 @@ class Application(Toplevel,Sender):
 				os.system(self._onStart)
 			except:
 				pass
-			
+
 		# run gcode file 
 		if lines is None:
 			#if not self.gcode.probe.isEmpty() and not self.gcode.probe.zeroed:
@@ -2304,6 +2301,7 @@ class Application(Toplevel,Sender):
 			#return
 
 			self._paths = self.gcode.compile(self.queue, self.checkStop)
+			
 			if self._paths is None:
 				self.emptyQueue()
 				self.purgeController()
@@ -2315,6 +2313,7 @@ class Application(Toplevel,Sender):
 					parent=self)
 				return
 
+		
 			# reset colors
 			before = time.time()
 			for ij in self._paths:	# Slow loop
@@ -2335,10 +2334,9 @@ class Application(Toplevel,Sender):
 			# the buffer of the machine should be empty?
 			self._runLines = len(self._paths) + 1	# plus the wait
 		else:
-			# run gcode lines
-			lines.insert(0, "$1=255")
-			lines.append("$1=254")
+			# run gcode lines, for probe, abl etc
 			n = 1		# including one wait command
+
 			for line in CNC.compile(lines):
 				if line is not None:
 					if isinstance(line,str):
@@ -2348,7 +2346,6 @@ class Application(Toplevel,Sender):
 					n += 1
 			self._runLines = n	# set it at the end to be sure that all lines are queued
 		self.queue.put((WAIT,))		# wait at the end to become idle
-
 		self.setStatus(_("Running..."))
 		self.statusbar.setLimits(0, self._runLines)
 		self.statusbar.configText(fill="White")
@@ -2444,9 +2441,11 @@ class Application(Toplevel,Sender):
 					self.terminal.itemconfig(END, foreground="Red")
 
 				elif msg == Sender.MSG_RUNEND:
+					
 					self.terminal.insert(END, line)
 					self.terminal.itemconfig(END, foreground="Magenta")
 					self.setStatus(line)
+					# enabling buttons
 					self.enable()
 
 				elif msg == Sender.MSG_CLEAR:

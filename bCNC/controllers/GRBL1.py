@@ -193,21 +193,24 @@ class Controller(_GenericGRBL):
 			self.master.sio_wait = False
 			self.master._gcount += 1
 
+
 	def parseBracketSquare(self, line):
 		word = SPLITPAT.split(line[1:-1])
 		#print word
 		if word[0] == "PRB":
+
 			CNC.vars["prbx"] = float(word[1])
 			CNC.vars["prby"] = float(word[2])
 			CNC.vars["prbz"] = float(word[3])
 			#if self.running:
-			self.master.gcode.probe.add(
+			self.master.gcode.probe.addAblProbePoints(
 				 CNC.vars["prbx"]-CNC.vars["wcox"],
 				 CNC.vars["prby"]-CNC.vars["wcoy"],
 				 CNC.vars["prbz"]-CNC.vars["wcoz"])
 			self.master._probeUpdate = True
 			CNC.vars[word[0]] = word[1:]
-		if word[0] == "G92":
+
+		elif word[0] == "G92":
 			CNC.vars["G92X"] = float(word[1])
 			CNC.vars["G92Y"] = float(word[2])
 			CNC.vars["G92Z"] = float(word[3])
@@ -218,13 +221,13 @@ class Controller(_GenericGRBL):
 				CNC.vars["G92C"] = float(word[6])
 			CNC.vars[word[0]] = word[1:]
 			self.master._gUpdate = True
-		if word[0] == "G28":
+		elif word[0] == "G28":
 			CNC.vars["G28X"] = float(word[1])
 			CNC.vars["G28Y"] = float(word[2])
 			CNC.vars["G28Z"] = float(word[3])
 			CNC.vars[word[0]] = word[1:]
 			self.master._gUpdate = True
-		if word[0] == "G30":
+		elif word[0] == "G30":
 			CNC.vars["G30X"] = float(word[1])
 			CNC.vars["G30Y"] = float(word[2])
 			CNC.vars["G30Z"] = float(word[3])
