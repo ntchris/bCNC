@@ -12,7 +12,7 @@ __email__  = "vvlachoudis@gmail.com"
 import sys
 # import time
 import math
-import time
+
 try:
 	from Tkinter import *
 	import tkMessageBox
@@ -28,8 +28,6 @@ import tkExtra
 
 import CNCRibbon
 
-# for advance button action handling
-import AdvanceButtonHandler
 
 PROBE_CMD = [	_("G38.2 stop on contact else error"),
 		_("G38.3 stop on contact"),
@@ -1008,7 +1006,6 @@ class ProbeFrame(CNCRibbon.PageFrame):
 #===============================================================================
 class AutolevelFrame(CNCRibbon.PageFrame):
 	def __init__(self, master, app):
-		self.abhThread = None
 
 		CNCRibbon.PageFrame.__init__(self, master, "Probe:Autolevel", app)
 
@@ -1126,6 +1123,7 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		self.probeYmax.set(str(probe.ymax))
 		self.probeYbins.delete(0,END)
 		self.probeYbins.insert(0,probe.yn)
+		print("setting probeYbins " +  str(probe.yn) )
 		self.probeYstep["text"] = str(probe.ystep())
 
 		self.probeZmin.set(str(probe.zmin))
@@ -1144,6 +1142,8 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		Utils.setInt(  "Probe", "yn",   self.probeYbins.get())
 		Utils.setFloat("Probe", "zmin", self.probeZmin.get())
 		Utils.setFloat("Probe", "zmax", self.probeZmax.get())
+		#Utils.setFloat("Probe", "ablProbeStepLen", self._xstep)
+		Utils.setFloat("Probe", "ablProbeStepLen", self.app.gcode.probe.defaultAblProbeStepLen)
 
 	#-----------------------------------------------------------------------
 	def loadConfig(self):
@@ -1159,6 +1159,9 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 
 		self.probeYbins.delete(0,END)
 		self.probeYbins.insert(0,max(2,Utils.getInt("Probe","yn",5)))
+		
+		self.app.gcode.probe.defaultAblProbeStepLen= Utils.getFloat("Probe", "ablProbeStepLen")
+				
 		self.updateProbeParams(False)
 
 	#-----------------------------------------------------------------------
@@ -1169,14 +1172,55 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		self.probeYmax.set(str(CNC.vars["ymax"]))
 		self.draw()
 
+
+ 
+
+	def setAutoSetStepN(self,  xyStepLen = 5):
+			# in some case the xy step len is not set (loaded from config), then its 0, 
+			# using 5 as default step length value
+			if( xyStepLen <=1):
+				xyStepLen = 5
+			xDist =  self.app.gcode.probe.xmax - self.app.gcode.probe.xmin
+			# xDist = self.app xmax-self.xmin
+			yDist =  self.app.gcode.probe.ymax - self.app.gcode.probe.ymin
+			
+			xStepN = self.getAutoAblStepN( xDist, xyStepLen )
+			yStepN = self.getAutoAblStepN( yDist, xyStepLen )
+
+			#set gui step n = xstepN
+			self.app.gcode.probe.xn = xStepN
+			print("xn is " + str( self.app.gcode.probe.xn))
+			self.app.gcode.probe.yn = yStepN
+			print("yn is " + str( self.app.gcode.probe.yn))
+#			self.autolevel.probeXbins.set(xStepN)
+			#self.probeXbins.insert(0,xStepN)
+			self.setValues()
+			self.updateProbeParams()
+			#self.autolevel.ablProbeStepLen =  !!!!
+
+	# xn is not important, xstep is, usiung provided xstep to get xn
+	def getAutoAblStepN(self, distance, steplen ):
+		
+		stepn=math.ceil ( distance / float(steplen)) +1
+		if(stepn<2):
+			stepn=2
+		return stepn
+
+
+
+
 	#-----------------------------------------------------------------------
 	# return true if successful
 	def updateProbeParams(self, verbose=True):
 		probe = self.app.gcode.probe
 		ok = True
 		try:
+			# when no file is loaded, simply return
 			probe.xmin = float(self.probeXmin.get())
 			probe.xmax = float(self.probeXmax.get())
+		except ValueError:
+			return False	
+		try:	
 			probe.xn   = max(2,int(self.probeXbins.get()))
 			self.probeXstep["text"] = "%.5g"%(probe.xstep())
 		except ValueError:
@@ -1248,6 +1292,8 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 
 		return ok
 
+
+
 	#-----------------------------------------------------------------------
 	def draw(self):
 		if self.updateProbeParams():
@@ -1259,7 +1305,6 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		y = CNC.vars["wy"]
 		self.app.gcode.probe.setZero(x,y)
 		self.draw()
-		print("done setting current point abl zero" + str(x) + " "+ str(y) )
 
 	#-----------------------------------------------------------------------
 	def clear(self, event=None):
@@ -1376,113 +1421,7 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		abhThread.start()
 		
  
-	# !!!  
-	def monitorAblStatusUsingThreadZZZ(self):
-		self.abh = AdvanceButtonHandler.AdvanceButtonHandler(app, CNC.vars)
-		probMidPointGcode = self.app.gcode.probe.getGCodeForWorkAreaMidPointProbe()
-		self.abh.addActionItem( probMidPointGcode )
-		
-		self.abh.start()
-		##		RuntimeError: threads can only be started once
-
-		print("thread started")
-		return
-
-	def monitorAblStatusZZZ( self ):
-		
-		self.waitForABLWorkAreaFinish();
-		
-		print("monitorAblStatusUsingWhileWait")
-		self.waitForCNCVarRunningFinish()
-		print("Done  ABL step1")
-		# probing work area is now done.
-		self.app.gcode.probe.ablProbingWorkArea = False
-					
-		self.app.gcode.probe.ablProbingZToSetZ0 = True			
-		probMidPointGcode = self.app.gcode.probe.getGCodeForWorkAreaMidPointProbe()
-		# quiet mode, so don't ask user to confirm again
-		print("running probe mid point")
-		self.app.runGcode(lines=probMidPointGcode, quiet = True)	
-		time.sleep(0.5)
-		self.waitForCNCVarRunningFinish()
-				# finished probing mid point of work area
-		print("ABL step2: probing Mid Point done, now bit is touching PCB")
-		self.app.gcode.probe.ablProbingZToSetZ0 = False
-		# mid point probe is done , set z=0
-		# button Z=0
-		print("setting Z=0")
-		self.app.mcontrol._wcsSet(None,None,"0",None,None,None)
-		# need set Zero in current loc
-		# button Zero in ABL  ( not Z=0 button)                                                       
-		time.sleep(0.5)
-		# move Z up a little 
-		moveUpZ = self.app.gcode.probe.getGCodeForMovingZToProbeZmax()
-		self.sendGCode(moveUpZ)
-		print("setting X Y area zero")
-		self.setZero()
-		time.sleep(0.5)
-		moveToOrigin= "G0X0Y0"
-		self.sendGCode(moveToOrigin)
-		time.sleep(0.5)
-
-		# end of monitorAblStatusUsingWhileWait
-	
-	# GUI is messed up frozen	
-	def monitorAblStatusUsingAfter( self ):
-		MONITOR_AFTER =  500	# ms !!!!
-		
-		if(	self.app.gcode.probe.ablProbingWorkArea ):
-
-			if (  CNC.vars["running"] ):
-				# waiting for probing work area
-				# self.after(MONITOR_AFTER, self.monitorAblStatus)
-				print("running ABL step1")
-			else:
-
-				# Done waiting for probing work area, move to mid point to probe
-				self.app.gcode.probe.ablProbingWorkArea = False
-				self.app.gcode.probe.ablProbingZToSetZ0 = True
-				print("Done  ABL step1")
-				# important to sleep for a while to let the command queue to process/enqueue new command etc.
-				# if too short, has error, skipping the whole command
-				time.sleep(1.5)
-				print("running probe mid point")
-				probMidPointGcode = self.app.gcode.probe.getGCodeForWorkAreaMidPointProbe()
-				# quiet mode, so don't ask user to confirm again
-				self.app.runGcode(lines=probMidPointGcode, quiet = True)
-
-		elif( self.app.gcode.probe.ablProbingZToSetZ0 ):
-			if (  CNC.vars["running"] ):
-				# waiting for probing mid point of work area
-				print("running ABL step2")
-			else:
-				# finished probing mid point of work area
-				print("ABL step2: probing Mid Point done, now bit is touching PCB")
-				self.app.gcode.probe.ablProbingZToSetZ0 = False
-				# mid point probe is done , set z=0
-				# button Z=0
-				print("setting Z=0")
-				self.app.mcontrol._wcsSet(None,None,"0",None,None,None)
-				# need set Zero in current loc
-				# button Zero in ABL  ( not Z=0 button)
-				time.sleep(0.5)
-				# move Z up a little 
-				moveUpZ = self.app.gcode.probe.getGCodeForMovingZToProbeZmax()
-				self.sendGCode(moveUpZ)
-				print("setting X Y area zero")
-				self.setZero()
-				time.sleep(0.5)
-				moveToOrigin= "G0X0Y0"
-				self.sendGCode(moveToOrigin)
-				time.sleep(0.5)
-				# mvoe Z to point of origin
-				#time.sleep(1)
-				#self.app.runGcode(lines=moveUpToOrigin, quiet = True)
-
-		if (  CNC.vars["running"] or self.app.gcode.probe.ablProbingWorkArea or self.app.gcode.probe.ablProbingZToSetZ0 ):
-			self.after(MONITOR_AFTER, self.monitorAblStatus)
-		return
-		
+ 
 	#-----------------------------------------------------------------------
 	#Move gantry by the autolevel margins
 	#-----------------------------------------------------------------------

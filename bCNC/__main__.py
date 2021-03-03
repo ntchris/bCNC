@@ -2088,12 +2088,13 @@ class Application(Toplevel,Sender):
 			self.event_generate("<<DrawOrient>>")
 			self.event_generate("<<OrientSelect>>",data=0)
 			self.event_generate("<<OrientUpdate>>")
-
 		else:
 			self.editor.selectClear()
 			self.editor.fill()
 			self.canvas.reset()
 			self.draw()
+			# draw change a lot things , only draw margin to load xmax min ymax min
+			#self.canvas.drawMargin()
 			self.canvas.fit2Screen()
 			Page.frames["CAM"].populate()
 
@@ -2104,9 +2105,14 @@ class Application(Toplevel,Sender):
 		self.title("%s %s: %s"%(Utils.__prg__,__version__,self.gcode.filename))
 
 		print(ext)
-		if ext== ".nc":
-			# drawProbe()
+		if ext == ".nc":
+			# using draw to update xmax xmin
+
+			#!!!! when load a file , auto get reasonable step N for x and y (so the step length is reasonable)
+			#self.autolevel.setAutoSetStepN( self.autolevel.ablProbeStepLen  )
+			self.autolevel.setAutoSetStepN(  self.gcode.probe.defaultAblProbeStepLen )
 			self.autolevel.getMargins()
+
 			self.event_generate("<<DrawProbe>>")
 
 			print("auto load margins")
@@ -2456,7 +2462,7 @@ class Application(Toplevel,Sender):
 					self.buffer.insert(END, line)
 					self.terminal.itemconfig(END, foreground="Magenta")
 				
-				TermMaxSize = 1000
+				TermMaxSize = 800
 				if self.terminal.size() > TermMaxSize:
 					self.terminal.delete(0)
 			except Empty:

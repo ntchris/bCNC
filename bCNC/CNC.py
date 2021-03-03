@@ -153,7 +153,7 @@ class Probe:
 
 		self._xstep = 1.0
 		self._ystep = 1.0
-
+		#xn and yn shouldn't matter, what matters is x, y step length
 		self.xn = 5
 		self.yn = 5
 
@@ -274,6 +274,7 @@ class Probe:
 	def xstep(self):
 		self._xstep = (self.xmax-self.xmin)/float(self.xn-1)
 		return self._xstep
+ 
 
 	#----------------------------------------------------------------------
 	def ystep(self):
@@ -373,8 +374,6 @@ class Probe:
 			x -= xstep
 			xstep = -xstep
 
-        # gcode to disable stepper motor lock
-		# lines.append("$1=254")
 		return lines
 
 	def getWorkAreaMidPoint(self):
