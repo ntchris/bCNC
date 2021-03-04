@@ -1151,8 +1151,11 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		# self.probeXmax.set(Utils.getFloat("Probe","xmax"))
 		# self.probeYmin.set(Utils.getFloat("Probe","ymin"))
 		# self.probeYmax.set(Utils.getFloat("Probe","ymax"))
-		self.probeZmin.set(Utils.getFloat("Probe","zmin"))
-		self.probeZmax.set(Utils.getFloat("Probe","zmax"))
+		probe = self.app.gcode.probe
+		probe.zmin = Utils.getFloat("Probe","zmin")
+		probe.zmax = Utils.getFloat("Probe","zmax")
+		self.probeZmin.set(probe.zmin)
+		self.probeZmax.set(probe.zmax)
 
 		self.probeXbins.delete(0,END)
 		self.probeXbins.insert(0,max(2,Utils.getInt("Probe","xn",5)))
@@ -1161,7 +1164,7 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		self.probeYbins.insert(0,max(2,Utils.getInt("Probe","yn",5)))
 		
 		self.app.gcode.probe.defaultAblProbeStepLen= Utils.getFloat("Probe", "ablProbeStepLen")
-				
+       				
 		self.updateProbeParams(False)
 
 	#-----------------------------------------------------------------------

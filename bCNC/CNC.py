@@ -447,7 +447,7 @@ class Probe:
 		lines.append("G0Z%.4f"%(self.zmax))
 		lines.append("G0X%.4fY%.4f"%(self.xmin,self.ymin))
         # gcode to disable stepper motor lock
-		lines.append("$1=254")
+
 		return lines
 
 
