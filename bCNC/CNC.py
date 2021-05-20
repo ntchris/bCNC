@@ -190,8 +190,8 @@ class Probe:
 		self.clear()
 		self.saved = True
 
-		def read(f):
-			while True:
+	def read(f):
+		while True:
 				line = f.readline()
 				assert line , "Read an empty line, please check file IO settings"
 				line = line.strip()
@@ -217,7 +217,7 @@ class Probe:
 					self.add(*read(f))
 		except:
 			raise
-			#print "Error reading probe file",self.filename
+			print( "Error reading probe file",self.filename)
 		f.close()
 
 	#----------------------------------------------------------------------
@@ -362,6 +362,7 @@ class Probe:
 		xstep = self._xstep
 		# gcode to enable stepper motor lock
 		lines = []
+
         # do auto bed leveling from 0,0
 		print(" ymin: "+ str(self.ymin )+ " ymax: " + str( self.ymax) )
 		for j in range(self.yn):
