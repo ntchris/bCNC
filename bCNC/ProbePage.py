@@ -1142,7 +1142,6 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		Utils.setInt(  "Probe", "yn",   self.probeYbins.get())
 		Utils.setFloat("Probe", "zmin", self.probeZmin.get())
 		Utils.setFloat("Probe", "zmax", self.probeZmax.get())
-		#Utils.setFloat("Probe", "ablProbeStepLen", self._xstep)
 		Utils.setFloat("Probe", "ablProbeStepLen", self.app.gcode.probe.defaultAblProbeStepLen)
 
 	#-----------------------------------------------------------------------
@@ -1341,6 +1340,7 @@ class AutolevelFrame(CNCRibbon.PageFrame):
 		self.event_generate("<<DrawProbe>>")
 		# absolute
 		ablGCode = []
+		ablGCode.append("$1=255")
 		## remove below
 		#setZeroLocalCommand =  CNC.LOCALCOMMAND.SETZERO +" "+ str(1) +" "+ str(2)
 		#ablGCode.append( setZeroLocalCommand )

@@ -84,7 +84,7 @@ class _GenericController:
 		# enable stepper motor lock when doing home.
 		self.master.sendGCode("$1=255")
 		self.master.sendGCode("$H")
-		self.master.sendGCode("$1=254")
+
 
 	def viewStatusReport(self):
 		self.master.serial_write(b"?")

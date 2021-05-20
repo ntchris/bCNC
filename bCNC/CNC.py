@@ -145,11 +145,11 @@ class Probe:
 		self.filename = ""
 		self.xmin =   0.0
 		self.ymin =   0.0
-		self.zmin = -10.0
+		self.zmin = -0.22
 
 		self.xmax =  10.0
 		self.ymax =  10.0
-		self.zmax =   3.0
+		self.zmax =   0.62
 
 		self._xstep = 1.0
 		self._ystep = 1.0
@@ -362,7 +362,6 @@ class Probe:
 		xstep = self._xstep
 		# gcode to enable stepper motor lock
 		lines = []
-
         # do auto bed leveling from 0,0
 		print(" ymin: "+ str(self.ymin )+ " ymax: " + str( self.ymax) )
 		for j in range(self.yn):
