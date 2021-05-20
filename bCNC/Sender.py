@@ -408,7 +408,7 @@ class Sender:
 			if filename is not None:
 				self.gcode.probe.filename = filename
 				self._saveConfigFile()
-			self.gcode.probe.load(filename)
+			self.gcode.probe.loadAbl(filename)
 		elif ext == ".orient":
 			# save orientation file
 			self.gcode.orient.load(filename)

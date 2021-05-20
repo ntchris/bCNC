@@ -184,14 +184,14 @@ class Probe:
 	#----------------------------------------------------------------------
 	# Load autolevel information from file
 	#----------------------------------------------------------------------
-	def load(self, filename=None):
+	def loadAbl(self, filename=None):
 		if filename is not None:
 			self.filename = filename
 		self.clear()
 		self.saved = True
 
-	def read(f):
-		while True:
+		def read(f):
+			while True:
 				line = f.readline()
 				assert line , "Read an empty line, please check file IO settings"
 				line = line.strip()
@@ -214,7 +214,7 @@ class Probe:
 		try:
 			for j in range(self.yn):
 				for i in range(self.xn):
-					self.add(*read(f))
+					self.addAblProbePoints(*read(f))
 		except:
 			raise
 			print( "Error reading probe file",self.filename)
